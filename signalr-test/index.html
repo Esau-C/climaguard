@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba SignalR - ClimaGuard</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+</head>
+
+<body>
+
+    <h1>ClimaGuard - Prueba SignalR</h1>
+
+    <p id="estado">Conectando...</p>
+
+    <h2>Alertas recibidas</h2>
+
+    <ul id="alertas"></ul>
+
+    <script>
+
+        const estado = document.getElementById("estado");
+        const listaAlertas = document.getElementById("alertas");
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("http://localhost:5184/hubs/alerts")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("NuevaAlerta", (alerta) => {
+
+            console.log("Nueva alerta recibida:", alerta);
+
+            const item = document.createElement("li");
+
+            item.innerHTML = `
+                <strong>${alerta.nivel}</strong>
+                -
+                ${alerta.tipoFenomeno}
+                -
+                ${alerta.titulo}
+                -
+                ${alerta.mensaje}
+            `;
+
+            listaAlertas.prepend(item);
+
+        });
+
+        connection.start()
+            .then(() => {
+
+                estado.innerText =
+                    "Conectado correctamente a SignalR";
+
+                console.log("SignalR conectado");
+
+            })
+            .catch(error => {
+
+                estado.innerText =
+                    "Error al conectar con SignalR";
+
+                console.error(error);
+
+            });
+
+    </script>
+
+</body>
+</html>

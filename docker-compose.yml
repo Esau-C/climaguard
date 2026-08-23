@@ -1,0 +1,15 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: climaguard-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ClimaGuard2026!"
+    ports:
+      - "15433:1433"
+    volumes:
+      - climaguard_sql_data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  climaguard_sql_data:
