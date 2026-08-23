@@ -1,0 +1,123 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  background: #f3f6f8;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 38px;
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+.marca {
+  margin-bottom: 35px;
+}
+
+.marca h1 {
+  margin: 0;
+  font-size: 34px;
+  color: #111827;
+}
+
+.marca p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.formulario h2 {
+  margin: 0;
+  font-size: 25px;
+  color: #111827;
+}
+
+.subtitulo {
+  margin: 8px 0 25px;
+  color: #6b7280;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.campo label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.campo input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  outline: none;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.campo input:focus {
+  border-color: #2563eb;
+}
+
+.error {
+  margin-bottom: 18px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+button {
+  width: 100%;
+  border: none;
+  border-radius: 9px;
+  padding: 14px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1f2937;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 500px) {
+
+  .login-page {
+    padding: 18px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+}

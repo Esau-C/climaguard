@@ -1,0 +1,291 @@
+<app-navbar></app-navbar>
+
+<main class="pagina">
+
+  <div class="titulo">
+
+    <div>
+      <h1>Alertas</h1>
+
+      <p>
+        Historial de alertas detectadas por ClimaGuard
+      </p>
+    </div>
+
+    <span class="contador">
+      {{ alertasFiltradas().length }}
+      {{ alertasFiltradas().length === 1 ? 'alerta' : 'alertas' }}
+    </span>
+
+  </div>
+
+  <!-- filtros -->
+
+  <section class="filtros">
+
+    <div class="campo-filtro">
+
+      <label>
+        Nivel
+      </label>
+
+      <select
+        [ngModel]="filtroNivel()"
+        (ngModelChange)="cambiarNivel($event)"
+      >
+
+        <option value="">
+          Todos
+        </option>
+
+        <option value="ROJO">
+          ROJO
+        </option>
+
+        <option value="NARANJA">
+          NARANJA
+        </option>
+
+        <option value="AMARILLO">
+          AMARILLO
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="campo-filtro">
+
+      <label>
+        Estado
+      </label>
+
+      <select
+        [ngModel]="filtroEstado()"
+        (ngModelChange)="cambiarEstado($event)"
+      >
+
+        <option value="">
+          Todos
+        </option>
+
+        <option value="ACTIVA">
+          ACTIVA
+        </option>
+
+        <option value="ATENDIDA">
+          ATENDIDA
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="campo-filtro">
+
+      <label>
+        Fenómeno
+      </label>
+
+      <select
+        [ngModel]="filtroFenomeno()"
+        (ngModelChange)="cambiarFenomeno($event)"
+      >
+
+        <option value="">
+          Todos
+        </option>
+
+        <option value="Inundacion">
+          Inundación
+        </option>
+
+        <option value="Tormenta">
+          Tormenta
+        </option>
+
+        <option value="Incendio forestal">
+          Incendio forestal
+        </option>
+
+      </select>
+
+    </div>
+
+    <button
+      type="button"
+      class="btn-limpiar"
+      (click)="limpiarFiltros()"
+    >
+      Limpiar filtros
+    </button>
+
+  </section>
+
+  <!-- cargando -->
+
+  <div
+    *ngIf="cargando()"
+    class="mensaje"
+  >
+    Cargando alertas...
+  </div>
+
+  <!-- error -->
+
+  <div
+    *ngIf="error()"
+    class="error"
+  >
+
+    <p>
+      {{ error() }}
+    </p>
+
+    <button
+      type="button"
+      (click)="cargarAlertas()"
+    >
+      Intentar nuevamente
+    </button>
+
+  </div>
+
+  <!-- sin resultados -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      alertasFiltradas().length === 0
+    "
+    class="mensaje"
+  >
+    No se encontraron alertas con los filtros seleccionados.
+  </div>
+
+  <!-- alertas -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      alertasFiltradas().length > 0
+    "
+    class="lista-alertas"
+  >
+
+    <article
+      *ngFor="let alerta of alertasFiltradas()"
+      class="alerta"
+      [class.rojo]="alerta.nivel === 'ROJO'"
+      [class.naranja]="alerta.nivel === 'NARANJA'"
+      [class.amarillo]="alerta.nivel === 'AMARILLO'"
+    >
+
+      <div class="alerta-superior">
+
+        <div class="badges">
+
+          <span class="nivel">
+            {{ alerta.nivel }}
+          </span>
+
+          <span
+            class="estado"
+            [class.activa]="alerta.estado === 'ACTIVA'"
+            [class.atendida]="alerta.estado === 'ATENDIDA'"
+          >
+            {{ alerta.estado }}
+          </span>
+
+        </div>
+
+        <span class="fecha">
+          {{ alerta.fechaGeneracion | date:'dd/MM/yyyy HH:mm:ss' }}
+        </span>
+
+      </div>
+
+      <h2>
+        {{ alerta.titulo }}
+      </h2>
+
+      <p class="fenomeno">
+        {{ alerta.tipoFenomeno }}
+      </p>
+
+      <p class="mensaje-alerta">
+        {{ alerta.mensaje }}
+      </p>
+
+      <div class="datos">
+
+        <div>
+          <span>Sensor</span>
+
+          <strong>
+            {{ alerta.sensor?.nombre || 'Sensor #' + alerta.idSensor }}
+          </strong>
+        </div>
+
+        <div>
+          <span>Ubicación</span>
+
+          <strong>
+            {{ alerta.sensor?.ubicacion || 'Sin ubicación' }}
+          </strong>
+        </div>
+
+        <div>
+          <span>Lectura</span>
+
+          <strong>
+            #{{ alerta.idLectura }}
+          </strong>
+        </div>
+
+        <div>
+          <span>ID alerta</span>
+
+          <strong>
+            #{{ alerta.idAlerta }}
+          </strong>
+        </div>
+
+      </div>
+
+      <!-- acciones -->
+
+      <div class="acciones-alerta">
+
+        <button
+          *ngIf="alerta.estado === 'ACTIVA'"
+          type="button"
+          class="btn-atender"
+          [disabled]="alertaActualizando() === alerta.idAlerta"
+          (click)="marcarComoAtendida(alerta)"
+        >
+
+          {{
+            alertaActualizando() === alerta.idAlerta
+              ? 'Actualizando...'
+              : 'Marcar como atendida'
+          }}
+
+        </button>
+
+        <span
+          *ngIf="alerta.estado === 'ATENDIDA'"
+          class="texto-atendida"
+        >
+          Alerta atendida
+        </span>
+
+      </div>
+
+    </article>
+
+  </div>
+
+</main>

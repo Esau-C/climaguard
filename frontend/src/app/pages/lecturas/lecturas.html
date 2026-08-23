@@ -1,0 +1,523 @@
+<app-navbar></app-navbar>
+
+<main class="pagina">
+
+  <div class="titulo">
+
+    <div>
+
+      <h1>
+        Lecturas
+      </h1>
+
+      <p>
+        Mediciones registradas por los sensores
+      </p>
+
+    </div>
+
+    <span class="contador">
+
+      {{ lecturasFiltradas().length }}
+
+      {{
+        lecturasFiltradas().length === 1
+          ? 'lectura'
+          : 'lecturas'
+      }}
+
+    </span>
+
+  </div>
+
+
+  <!-- filtros -->
+
+  <section class="filtros">
+
+    <div class="campo-filtro">
+
+      <label>
+        Sensor
+      </label>
+
+      <select
+        [ngModel]="filtroSensor()"
+        (ngModelChange)="cambiarSensor($event)"
+      >
+
+        <option value="">
+          Todos
+        </option>
+
+        <option
+          *ngFor="
+            let sensor of sensoresDisponibles()
+          "
+          [value]="sensor.idSensor"
+        >
+          {{ sensor.nombre }}
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="campo-filtro">
+
+      <label>
+        Fecha
+      </label>
+
+      <input
+        type="date"
+        [ngModel]="filtroFecha()"
+        (ngModelChange)="cambiarFecha($event)"
+      >
+
+    </div>
+
+
+    <div class="campo-filtro campo-busqueda">
+
+      <label>
+        Buscar
+      </label>
+
+      <input
+        type="text"
+        [ngModel]="busqueda()"
+        (ngModelChange)="cambiarBusqueda($event)"
+        placeholder="Sensor, ubicación o ID"
+      >
+
+    </div>
+
+
+    <button
+      type="button"
+      class="btn-limpiar"
+      (click)="limpiarFiltros()"
+    >
+      Limpiar filtros
+    </button>
+
+  </section>
+
+
+  <!-- leyenda -->
+
+  <div class="leyenda">
+
+    <span class="leyenda-titulo">
+      Indicadores:
+    </span>
+
+    <span class="leyenda-item">
+
+      <span class="muestra normal">
+      </span>
+
+      Normal
+
+    </span>
+
+    <span class="leyenda-item">
+
+      <span class="muestra alto">
+      </span>
+
+      Alto
+
+    </span>
+
+    <span class="leyenda-item">
+
+      <span class="muestra critico">
+      </span>
+
+      Crítico
+
+    </span>
+
+  </div>
+
+
+  <!-- cargando -->
+
+  <div
+    *ngIf="cargando()"
+    class="mensaje"
+  >
+    Cargando lecturas...
+  </div>
+
+
+  <!-- error -->
+
+  <div
+    *ngIf="error()"
+    class="error"
+  >
+
+    <p>
+      {{ error() }}
+    </p>
+
+    <button
+      type="button"
+      (click)="cargarLecturas()"
+    >
+      Intentar nuevamente
+    </button>
+
+  </div>
+
+
+  <!-- sin resultados -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      lecturasFiltradas().length === 0
+    "
+    class="mensaje"
+  >
+    No se encontraron lecturas con los filtros seleccionados.
+  </div>
+
+
+  <!-- tabla -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      lecturasFiltradas().length > 0
+    "
+    class="tabla-contenedor"
+  >
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            ID
+          </th>
+
+          <th>
+            Sensor
+          </th>
+
+          <th>
+            Temperatura
+          </th>
+
+          <th>
+            Humedad
+          </th>
+
+          <th>
+            Viento
+          </th>
+
+          <th>
+            Lluvia
+          </th>
+
+          <th>
+            Nivel de agua
+          </th>
+
+          <th>
+            Fecha
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        <tr
+          *ngFor="
+            let lectura of lecturasPaginadas()
+          "
+        >
+
+          <!-- id -->
+
+          <td>
+
+            #{{ lectura.idLectura }}
+
+          </td>
+
+
+          <!-- sensor -->
+
+          <td>
+
+            <strong>
+
+              {{
+                lectura.sensor?.nombre ||
+                'Sensor #' + lectura.idSensor
+              }}
+
+            </strong>
+
+            <small>
+
+              {{
+                lectura.sensor?.ubicacion ||
+                'Sin ubicación'
+              }}
+
+            </small>
+
+          </td>
+
+
+          <!-- temperatura -->
+
+          <td>
+
+            <span
+              class="valor"
+              [class.valor-critico]="
+                esTemperaturaCritica(
+                  lectura.temperatura
+                )
+              "
+            >
+
+              {{
+                lectura.temperatura !== null &&
+                lectura.temperatura !== undefined
+                  ? lectura.temperatura + ' °C'
+                  : 'N/D'
+              }}
+
+            </span>
+
+          </td>
+
+
+          <!-- humedad -->
+
+          <td>
+
+            <span
+              class="valor"
+              [class.valor-alto]="
+                esHumedadAlta(
+                  lectura.humedad
+                )
+              "
+            >
+
+              {{
+                lectura.humedad !== null &&
+                lectura.humedad !== undefined
+                  ? lectura.humedad + ' %'
+                  : 'N/D'
+              }}
+
+            </span>
+
+          </td>
+
+
+          <!-- viento -->
+
+          <td>
+
+            <span
+              class="valor"
+              [class.valor-critico]="
+                esVientoCritico(
+                  lectura.velocidadViento
+                )
+              "
+            >
+
+              {{
+                lectura.velocidadViento !== null &&
+                lectura.velocidadViento !== undefined
+                  ? lectura.velocidadViento
+                  : 'N/D'
+              }}
+
+            </span>
+
+          </td>
+
+
+          <!-- lluvia -->
+
+          <td>
+
+            <span
+              class="valor"
+              [class.valor-critico]="
+                esLluviaCritica(
+                  lectura.nivelLluvia
+                )
+              "
+            >
+
+              {{
+                lectura.nivelLluvia !== null &&
+                lectura.nivelLluvia !== undefined
+                  ? lectura.nivelLluvia
+                  : 'N/D'
+              }}
+
+            </span>
+
+          </td>
+
+
+          <!-- nivel de agua -->
+
+          <td>
+
+            <span
+              class="valor"
+              [class.valor-critico]="
+                esNivelAguaCritico(
+                  lectura.nivelAgua
+                )
+              "
+            >
+
+              {{
+                lectura.nivelAgua !== null &&
+                lectura.nivelAgua !== undefined
+                  ? lectura.nivelAgua
+                  : 'N/D'
+              }}
+
+            </span>
+
+          </td>
+
+
+          <!-- fecha -->
+
+          <td>
+
+            {{
+              lectura.fechaLectura
+                | date:'dd/MM/yyyy HH:mm:ss'
+            }}
+
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+
+    <!-- paginacion -->
+
+    <div class="paginacion">
+
+      <div class="paginacion-info">
+
+        <span>
+          Mostrar
+        </span>
+
+        <select
+          [ngModel]="elementosPorPagina()"
+          (ngModelChange)="cambiarElementosPorPagina($event)"
+        >
+
+          <option [ngValue]="5">
+            5
+          </option>
+
+          <option [ngValue]="10">
+            10
+          </option>
+
+          <option [ngValue]="20">
+            20
+          </option>
+
+        </select>
+
+        <span>
+          por página
+        </span>
+
+      </div>
+
+
+      <div class="paginacion-centro">
+
+        Página
+        <strong>
+          {{ paginaActual() }}
+        </strong>
+        de
+        <strong>
+          {{ totalPaginas() }}
+        </strong>
+
+      </div>
+
+
+      <div class="paginacion-controles">
+
+        <button
+          type="button"
+          class="btn-pagina"
+          [disabled]="paginaActual() === 1"
+          (click)="paginaAnterior()"
+        >
+          Anterior
+        </button>
+
+
+        <button
+          *ngFor="let pagina of paginas()"
+          type="button"
+          class="btn-numero"
+          [class.activa]="
+            paginaActual() === pagina
+          "
+          (click)="irPagina(pagina)"
+        >
+          {{ pagina }}
+        </button>
+
+
+        <button
+          type="button"
+          class="btn-pagina"
+          [disabled]="
+            paginaActual() === totalPaginas()
+          "
+          (click)="paginaSiguiente()"
+        >
+          Siguiente
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</main>

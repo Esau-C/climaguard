@@ -1,0 +1,476 @@
+<app-navbar></app-navbar>
+
+<main class="pagina">
+
+  <div class="titulo">
+
+    <div>
+      <h1>Usuarios</h1>
+
+      <p>
+        Administración de usuarios de ClimaGuard
+      </p>
+    </div>
+
+    <div class="titulo-acciones">
+
+      <span class="contador">
+        {{ usuarios().length }}
+        {{ usuarios().length === 1 ? 'usuario' : 'usuarios' }}
+      </span>
+
+      <button
+        type="button"
+        class="btn-nuevo"
+        (click)="abrirNuevoUsuario()"
+      >
+        + Nuevo usuario
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- formulario -->
+
+  <section
+    *ngIf="mostrandoFormulario()"
+    class="formulario-card"
+  >
+
+    <div class="formulario-titulo">
+
+      <div>
+
+        <h2>
+          {{
+            modoEdicion()
+              ? 'Editar usuario'
+              : 'Nuevo usuario'
+          }}
+        </h2>
+
+        <p>
+          {{
+            modoEdicion()
+              ? 'Modifique la información del usuario seleccionado.'
+              : 'Ingrese los datos del nuevo usuario.'
+          }}
+        </p>
+
+      </div>
+
+      <button
+        type="button"
+        class="btn-cerrar"
+        (click)="cerrarFormulario()"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div class="formulario-grid">
+
+      <div class="campo">
+
+        <label>
+          Nombre
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.nombre"
+          placeholder="Ej. Alejandra"
+        >
+
+      </div>
+
+      <div class="campo">
+
+        <label>
+          Apellido
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.apellido"
+          placeholder="Ej. Gómez"
+        >
+
+      </div>
+
+      <div class="campo">
+
+        <label>
+          Usuario
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.username"
+          placeholder="Ej. agomez"
+        >
+
+      </div>
+
+      <div class="campo">
+
+        <label>
+          Rol
+        </label>
+
+        <select
+          [(ngModel)]="formulario.rol"
+        >
+
+          <option value="OPERADOR">
+            OPERADOR
+          </option>
+
+          <option value="ADMIN">
+            ADMIN
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="campo campo-completo">
+
+        <label>
+          {{
+            modoEdicion()
+              ? 'Nueva contraseña'
+              : 'Contraseña'
+          }}
+        </label>
+
+        <input
+          type="password"
+          [(ngModel)]="formulario.password"
+          [placeholder]="
+            modoEdicion()
+              ? 'Dejar vacío para conservar la contraseña actual'
+              : 'Ingrese una contraseña segura'
+          "
+        >
+
+        <small
+          *ngIf="modoEdicion() && !formulario.password"
+          class="ayuda"
+        >
+          Si no desea cambiar la contraseña, deje este campo vacío.
+        </small>
+
+        <div
+          *ngIf="formulario.password"
+          class="password-seguridad"
+        >
+
+          <div class="password-superior">
+
+            <span>
+              Seguridad de la contraseña
+            </span>
+
+            <strong
+              [class]="clasePassword()"
+            >
+              {{ nivelPassword() }}
+            </strong>
+
+          </div>
+
+          <div class="barra-password">
+
+            <div
+              class="barra-progreso"
+              [class]="clasePassword()"
+              [style.width.%]="porcentajePassword()"
+            >
+            </div>
+
+          </div>
+
+          <div class="requisitos">
+
+            <span
+              [class.cumple]="tieneLongitud()"
+            >
+              <span class="icono-requisito">
+                {{ tieneLongitud() ? '✓' : '○' }}
+              </span>
+
+              Mínimo 8 caracteres
+            </span>
+
+            <span
+              [class.cumple]="tieneMayuscula()"
+            >
+              <span class="icono-requisito">
+                {{ tieneMayuscula() ? '✓' : '○' }}
+              </span>
+
+              Una mayúscula
+            </span>
+
+            <span
+              [class.cumple]="tieneMinuscula()"
+            >
+              <span class="icono-requisito">
+                {{ tieneMinuscula() ? '✓' : '○' }}
+              </span>
+
+              Una minúscula
+            </span>
+
+            <span
+              [class.cumple]="tieneNumero()"
+            >
+              <span class="icono-requisito">
+                {{ tieneNumero() ? '✓' : '○' }}
+              </span>
+
+              Un número
+            </span>
+
+            <span
+              [class.cumple]="tieneEspecial()"
+            >
+              <span class="icono-requisito">
+                {{ tieneEspecial() ? '✓' : '○' }}
+              </span>
+
+              Un carácter especial
+            </span>
+
+          </div>
+
+          <div
+            *ngIf="esPasswordComun()"
+            class="password-comun"
+          >
+            Esta contraseña es demasiado común y no está permitida.
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="formulario-acciones">
+
+      <button
+        type="button"
+        class="btn-cancelar"
+        [disabled]="guardando()"
+        (click)="cerrarFormulario()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="button"
+        class="btn-guardar"
+        [disabled]="guardando()"
+        (click)="guardarUsuario()"
+      >
+        {{
+          guardando()
+            ? 'Guardando...'
+            : (
+                modoEdicion()
+                  ? 'Guardar cambios'
+                  : 'Crear usuario'
+              )
+        }}
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- cargando -->
+
+  <div
+    *ngIf="cargando()"
+    class="mensaje"
+  >
+    Cargando usuarios...
+  </div>
+
+  <!-- error -->
+
+  <div
+    *ngIf="error()"
+    class="error"
+  >
+
+    <p>
+      {{ error() }}
+    </p>
+
+    <button
+      type="button"
+      (click)="cargarUsuarios()"
+    >
+      Intentar nuevamente
+    </button>
+
+  </div>
+
+  <!-- sin usuarios -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      usuarios().length === 0
+    "
+    class="mensaje"
+  >
+    No hay usuarios registrados.
+  </div>
+
+  <!-- tabla -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      usuarios().length > 0
+    "
+    class="tabla-contenedor"
+  >
+
+    <table>
+
+      <thead>
+
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Fecha de creación</th>
+          <th>Acciones</th>
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        <tr
+          *ngFor="let usuario of usuarios()"
+        >
+
+          <td>
+            #{{ usuario.idUsuario }}
+          </td>
+
+          <td>
+
+            <strong>
+              {{ usuario.nombre }}
+              {{ usuario.apellido }}
+            </strong>
+
+          </td>
+
+          <td>
+            {{ usuario.username }}
+          </td>
+
+          <td>
+
+            <span
+              class="rol"
+              [class.admin]="usuario.rol === 'ADMIN'"
+              [class.operador]="usuario.rol === 'OPERADOR'"
+            >
+              {{ usuario.rol }}
+            </span>
+
+          </td>
+
+          <td>
+
+            <span
+              class="estado"
+              [class.activo]="usuario.activo"
+              [class.inactivo]="!usuario.activo"
+            >
+              {{
+                usuario.activo
+                  ? 'ACTIVO'
+                  : 'INACTIVO'
+              }}
+            </span>
+
+          </td>
+
+          <td>
+            {{
+              usuario.fechaCreacion
+                | date:'dd/MM/yyyy HH:mm:ss'
+            }}
+          </td>
+
+          <td>
+
+            <div class="acciones">
+
+              <button
+                type="button"
+                class="btn-editar"
+                (click)="editarUsuario(usuario)"
+              >
+                Editar
+              </button>
+
+              <button
+                type="button"
+                class="btn-estado"
+                [class.btn-activar]="
+                  !usuario.activo &&
+                  !esUsuarioActual(usuario)
+                "
+                [class.btn-desactivar]="
+                  usuario.activo &&
+                  !esUsuarioActual(usuario)
+                "
+                [class.btn-bloqueado]="
+                  esUsuarioActual(usuario)
+                "
+                [disabled]="
+                  esUsuarioActual(usuario)
+                "
+                (click)="cambiarEstado(usuario)"
+              >
+                {{
+                  esUsuarioActual(usuario)
+                    ? 'Sesión actual'
+                    : (
+                        usuario.activo
+                          ? 'Desactivar'
+                          : 'Activar'
+                      )
+                }}
+              </button>
+
+            </div>
+
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</main>

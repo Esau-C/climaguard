@@ -1,0 +1,566 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f4f7f9;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   PAGINA
+========================================= */
+
+.pagina {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+/* =========================================
+   TITULO
+========================================= */
+
+.titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  margin-bottom: 28px;
+}
+
+.titulo h1 {
+  margin: 0;
+
+  font-size: 30px;
+  color: #111827;
+}
+
+.titulo p {
+  margin: 6px 0 0;
+
+  color: #6b7280;
+}
+
+.contador {
+  flex-shrink: 0;
+
+  padding: 8px 14px;
+
+  background: #e0e7ff;
+  color: #3730a3;
+
+  border-radius: 999px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =========================================
+   FILTROS
+========================================= */
+
+.filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  flex-wrap: wrap;
+
+  margin-bottom: 28px;
+  padding: 20px;
+
+  background: #ffffff;
+
+  border-radius: 14px;
+
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.campo-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  min-width: 180px;
+}
+
+.campo-filtro label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.campo-filtro select {
+  min-height: 40px;
+
+  padding: 0 12px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #111827;
+
+  font-size: 14px;
+
+  outline: none;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.campo-filtro select:hover {
+  border-color: #9ca3af;
+}
+
+.campo-filtro select:focus {
+  border-color: #374151;
+
+  box-shadow:
+    0 0 0 3px rgba(55, 65, 81, 0.08);
+}
+
+/* =========================================
+   BOTON LIMPIAR FILTROS
+========================================= */
+
+.btn-limpiar {
+  min-height: 40px;
+
+  padding: 0 16px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #111827;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn-limpiar:hover {
+  background: #374151;
+}
+
+.btn-limpiar:active {
+  transform: scale(0.98);
+}
+
+/* =========================================
+   LISTA DE ALERTAS
+========================================= */
+
+.lista-alertas {
+  display: grid;
+  gap: 20px;
+}
+
+/* =========================================
+   TARJETA DE ALERTA
+========================================= */
+
+.alerta {
+  padding: 22px;
+
+  background: #ffffff;
+
+  border-radius: 14px;
+  border-left: 6px solid #9ca3af;
+
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.06);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.alerta:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================
+   NIVEL ROJO
+========================================= */
+
+.alerta.rojo {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.rojo .nivel {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* =========================================
+   NIVEL NARANJA
+========================================= */
+
+.alerta.naranja {
+  border-left-color: #f97316;
+  background: #fff7ed;
+}
+
+.naranja .nivel {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+/* =========================================
+   NIVEL AMARILLO
+========================================= */
+
+.alerta.amarillo {
+  border-left-color: #eab308;
+  background: #fefce8;
+}
+
+.amarillo .nivel {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* =========================================
+   PARTE SUPERIOR DE LA ALERTA
+========================================= */
+
+.alerta-superior {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================================
+   BADGES
+========================================= */
+
+.nivel,
+.estado {
+  display: inline-block;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 0.2px;
+}
+
+/* estado activa */
+
+.estado.activa {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* estado atendida */
+
+.estado.atendida {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* =========================================
+   FECHA
+========================================= */
+
+.fecha {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* =========================================
+   CONTENIDO DE LA ALERTA
+========================================= */
+
+.alerta h2 {
+  margin: 18px 0 5px;
+
+  font-size: 21px;
+  color: #111827;
+}
+
+.fenomeno {
+  margin: 0 0 14px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #374151;
+}
+
+.mensaje-alerta {
+  margin: 0;
+
+  line-height: 1.6;
+
+  color: #374151;
+}
+
+/* =========================================
+   DATOS DE LA ALERTA
+========================================= */
+
+.datos {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 16px;
+
+  margin-top: 20px;
+  padding-top: 18px;
+
+  border-top:
+    1px solid rgba(0, 0, 0, 0.08);
+}
+
+.datos div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.datos span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.datos strong {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+/* =========================================
+   ACCIONES DE LA ALERTA
+========================================= */
+
+.acciones-alerta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  margin-top: 18px;
+  padding-top: 16px;
+
+  border-top:
+    1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* =========================================
+   BOTON MARCAR COMO ATENDIDA
+========================================= */
+
+.btn-atender {
+  min-height: 40px;
+
+  padding: 10px 16px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #111827;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.btn-atender:hover:not(:disabled) {
+  background: #374151;
+}
+
+.btn-atender:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-atender:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   TEXTO ALERTA ATENDIDA
+========================================= */
+
+.texto-atendida {
+  display: inline-block;
+
+  padding: 8px 12px;
+
+  background: #dcfce7;
+  color: #166534;
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* =========================================
+   MENSAJE DE CARGA / SIN RESULTADOS
+========================================= */
+
+.mensaje {
+  padding: 40px;
+
+  text-align: center;
+
+  background: #ffffff;
+
+  border-radius: 12px;
+
+  color: #6b7280;
+
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* =========================================
+   ERROR
+========================================= */
+
+.error {
+  padding: 20px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+
+.error p {
+  margin-top: 0;
+}
+
+.error button {
+  padding: 9px 14px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: #b91c1c;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.error button:hover {
+  background: #991b1b;
+}
+
+/* =========================================
+   RESPONSIVE TABLET
+========================================= */
+
+@media (max-width: 900px) {
+
+  .datos {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+/* =========================================
+   RESPONSIVE MOVIL
+========================================= */
+
+@media (max-width: 750px) {
+
+  .pagina {
+    padding: 20px;
+  }
+
+  .titulo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .campo-filtro {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .btn-limpiar {
+    width: 100%;
+  }
+
+  .alerta-superior {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .acciones-alerta {
+    justify-content: stretch;
+  }
+
+  .btn-atender {
+    width: 100%;
+  }
+}
+
+/* =========================================
+   RESPONSIVE MOVIL PEQUEÑO
+========================================= */
+
+@media (max-width: 500px) {
+
+  .datos {
+    grid-template-columns: 1fr;
+  }
+
+  .alerta {
+    padding: 18px;
+  }
+
+  .alerta h2 {
+    font-size: 19px;
+  }
+}

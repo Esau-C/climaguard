@@ -1,0 +1,74 @@
+<nav class="navbar">
+
+  <div class="marca">
+    <h2>ClimaGuard</h2>
+  </div>
+
+  <div class="menu">
+
+    <a
+      routerLink="/dashboard"
+      routerLinkActive="activo"
+    >
+      Dashboard
+    </a>
+
+    <a
+      routerLink="/sensores"
+      routerLinkActive="activo"
+    >
+      Sensores
+    </a>
+
+    <a
+      routerLink="/lecturas"
+      routerLinkActive="activo"
+    >
+      Lecturas
+    </a>
+
+    <a
+      routerLink="/alertas"
+      routerLinkActive="activo"
+    >
+      Alertas
+    </a>
+
+    <a
+      *ngIf="esAdmin()"
+      routerLink="/usuarios"
+      routerLinkActive="activo"
+    >
+      Usuarios
+    </a>
+
+  </div>
+
+  <div
+    *ngIf="usuario()"
+    class="usuario"
+  >
+
+    <div class="usuario-info">
+
+      <strong>
+        {{ usuario()?.nombre }}
+        {{ usuario()?.apellido }}
+      </strong>
+
+      <span>
+        {{ usuario()?.rol }}
+      </span>
+
+    </div>
+
+    <button
+      type="button"
+      (click)="cerrarSesion()"
+    >
+      Salir
+    </button>
+
+  </div>
+
+</nav>

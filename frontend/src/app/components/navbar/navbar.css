@@ -1,0 +1,110 @@
+:host {
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.navbar {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  padding: 0 35px;
+  gap: 35px;
+  background: #111827;
+  color: #ffffff;
+}
+
+.marca h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.menu a {
+  color: #d1d5db;
+  text-decoration: none;
+  padding: 10px 13px;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.menu a:hover {
+  background: #1f2937;
+  color: #ffffff;
+}
+
+.menu a.activo {
+  background: #374151;
+  color: #ffffff;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.usuario-info {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.usuario-info strong {
+  font-size: 14px;
+}
+
+.usuario-info span {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.usuario button {
+  border: 1px solid #4b5563;
+  background: transparent;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.usuario button:hover {
+  background: #374151;
+}
+
+@media (max-width: 900px) {
+
+  .navbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+    gap: 15px;
+  }
+
+  .menu {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .usuario {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .usuario-info {
+    text-align: left;
+  }
+}

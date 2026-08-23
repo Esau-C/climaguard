@@ -1,0 +1,386 @@
+<app-navbar></app-navbar>
+
+<main class="pagina">
+
+  <div class="titulo">
+
+    <div>
+      <h1>Sensores</h1>
+
+      <p>
+        Administración de dispositivos registrados en ClimaGuard
+      </p>
+    </div>
+
+    <div class="titulo-acciones">
+
+      <span class="contador">
+        {{ sensores().length }}
+        {{ sensores().length === 1 ? 'sensor' : 'sensores' }}
+      </span>
+
+      <button
+        *ngIf="esAdmin()"
+        type="button"
+        class="btn-nuevo"
+        (click)="abrirNuevoSensor()"
+      >
+        + Nuevo sensor
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- formulario -->
+
+  <section
+    *ngIf="mostrandoFormulario() && esAdmin()"
+    class="formulario-card"
+  >
+
+    <div class="formulario-titulo">
+
+      <div>
+
+        <h2>
+          {{
+            modoEdicion()
+              ? 'Editar sensor'
+              : 'Nuevo sensor'
+          }}
+        </h2>
+
+        <p>
+          {{
+            modoEdicion()
+              ? 'Modifique la información del sensor seleccionado.'
+              : 'Ingrese los datos del nuevo sensor.'
+          }}
+        </p>
+
+      </div>
+
+      <button
+        type="button"
+        class="btn-cerrar"
+        (click)="cerrarFormulario()"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="formulario-grid">
+
+      <div class="campo">
+
+        <label>
+          Nombre
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.nombre"
+          placeholder="Ej. Sensor Rio Sur"
+        >
+
+      </div>
+
+
+      <div class="campo">
+
+        <label>
+          Tipo
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.tipo"
+          placeholder="Ej. Nivel de agua"
+        >
+
+      </div>
+
+
+      <div class="campo campo-completo">
+
+        <label>
+          Ubicación
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.ubicacion"
+          placeholder="Ej. Rio Sur"
+        >
+
+      </div>
+
+
+      <div class="campo">
+
+        <label>
+          Latitud
+        </label>
+
+        <input
+          type="number"
+          step="any"
+          [(ngModel)]="formulario.latitud"
+          placeholder="14.63"
+        >
+
+      </div>
+
+
+      <div class="campo">
+
+        <label>
+          Longitud
+        </label>
+
+        <input
+          type="number"
+          step="any"
+          [(ngModel)]="formulario.longitud"
+          placeholder="-90.51"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="formulario-acciones">
+
+      <button
+        type="button"
+        class="btn-cancelar"
+        [disabled]="guardando()"
+        (click)="cerrarFormulario()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="button"
+        class="btn-guardar"
+        [disabled]="guardando()"
+        (click)="guardarSensor()"
+      >
+        {{
+          guardando()
+            ? 'Guardando...'
+            : (
+                modoEdicion()
+                  ? 'Guardar cambios'
+                  : 'Crear sensor'
+              )
+        }}
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- cargando -->
+
+  <div
+    *ngIf="cargando()"
+    class="mensaje"
+  >
+    Cargando sensores...
+  </div>
+
+
+  <!-- error -->
+
+  <div
+    *ngIf="error()"
+    class="error"
+  >
+
+    <p>
+      {{ error() }}
+    </p>
+
+    <button
+      type="button"
+      (click)="cargarSensores()"
+    >
+      Intentar nuevamente
+    </button>
+
+  </div>
+
+
+  <!-- sin sensores -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      sensores().length === 0
+    "
+    class="mensaje"
+  >
+    No hay sensores registrados.
+  </div>
+
+
+  <!-- lista de sensores -->
+
+  <div
+    *ngIf="
+      !cargando() &&
+      !error() &&
+      sensores().length > 0
+    "
+    class="grid"
+  >
+
+    <article
+      *ngFor="let sensor of sensores()"
+      class="sensor-card"
+      [class.sensor-inactivo]="!sensor.activo"
+    >
+
+      <div class="sensor-header">
+
+        <div>
+
+          <h2>
+            {{ sensor.nombre }}
+          </h2>
+
+          <p>
+            {{ sensor.tipo }}
+          </p>
+
+        </div>
+
+
+        <span
+          class="estado"
+          [class.activo]="sensor.activo"
+          [class.inactivo]="!sensor.activo"
+        >
+          {{
+            sensor.activo
+              ? 'ACTIVO'
+              : 'INACTIVO'
+          }}
+        </span>
+
+      </div>
+
+
+      <div class="datos">
+
+        <div>
+
+          <span>
+            Ubicación
+          </span>
+
+          <strong>
+            {{ sensor.ubicacion }}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            ID del sensor
+          </span>
+
+          <strong>
+            #{{ sensor.idSensor }}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Latitud
+          </span>
+
+          <strong>
+            {{ sensor.latitud }}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Longitud
+          </span>
+
+          <strong>
+            {{ sensor.longitud }}
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="fecha">
+
+        Registrado:
+
+        {{
+          sensor.fechaRegistro
+            | date:'dd/MM/yyyy HH:mm'
+        }}
+
+      </div>
+
+
+      <!-- acciones solo admin -->
+
+      <div
+        *ngIf="esAdmin()"
+        class="acciones"
+      >
+
+        <button
+          type="button"
+          class="btn-editar"
+          (click)="editarSensor(sensor)"
+        >
+          Editar
+        </button>
+
+
+        <button
+          type="button"
+          class="btn-estado"
+          [class.btn-activar]="!sensor.activo"
+          [class.btn-desactivar]="sensor.activo"
+          (click)="cambiarEstado(sensor)"
+        >
+          {{
+            sensor.activo
+              ? 'Desactivar'
+              : 'Activar'
+          }}
+        </button>
+
+      </div>
+
+    </article>
+
+  </div>
+
+</main>
