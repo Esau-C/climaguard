@@ -1,0 +1,364 @@
+
+<div class="contenedor">
+  <app-navbar></app-navbar>
+
+  <main class="reglas-contenido">
+
+    <section class="encabezado">
+      <div>
+        <h1>Reglas de alerta</h1>
+        <p>Configuración de los umbrales para la detección automática de riesgos climáticos.</p>
+      </div>
+
+      <button
+        *ngIf="esAdministrador"
+        type="button"
+        class="btn-primario"
+        (click)="abrirFormulario()">
+        + Nueva regla
+      </button>
+    </section>
+
+    <div *ngIf="error()" class="mensaje-error">
+      {{ error() }}
+    </div>
+
+    <div *ngIf="mensaje()" class="mensaje-exito">
+      {{ mensaje() }}
+    </div>
+
+    <section class="panel-filtros">
+      <div class="campo">
+        <label for="filtroFenomeno">Fenómeno</label>
+        <select
+          id="filtroFenomeno"
+          [(ngModel)]="filtroFenomeno">
+          <option value="">Todos</option>
+          <option *ngFor="let fenomeno of fenomenos" [value]="fenomeno">
+            {{ fenomeno }}
+          </option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="filtroNivel">Nivel</label>
+        <select id="filtroNivel" [(ngModel)]="filtroNivel">
+          <option value="">Todos</option>
+          <option *ngFor="let nivel of niveles" [value]="nivel">
+            {{ nivel }}
+          </option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="filtroEstado">Estado</label>
+        <select id="filtroEstado" [(ngModel)]="filtroEstado">
+          <option value="">Todos</option>
+          <option value="ACTIVA">Activa</option>
+          <option value="INACTIVA">Inactiva</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="btn-secundario"
+        (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    </section>
+
+    <section class="panel-listado">
+      <div class="listado-encabezado">
+        <div>
+          <h2>Reglas configuradas</h2>
+          <p>Consulta y administra las condiciones que generan alertas.</p>
+        </div>
+
+        <span class="contador">
+          {{ reglasFiltradas.length }} reglas
+        </span>
+      </div>
+
+      <p *ngIf="cargando()" class="estado-vacio">
+        Cargando reglas de alerta...
+      </p>
+
+      <p
+        *ngIf="!cargando() && reglasFiltradas.length === 0"
+        class="estado-vacio">
+        No hay reglas que coincidan con los filtros seleccionados.
+      </p>
+
+      <div
+        *ngIf="!cargando() && reglasFiltradas.length > 0"
+        class="tabla-contenedor">
+
+        <table class="tabla-reglas">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Fenómeno</th>
+              <th>Condiciones</th>
+              <th>Nivel</th>
+              <th>Estado</th>
+              <th *ngIf="esAdministrador">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let regla of reglasFiltradas">
+              <td>
+                <strong>{{ regla.nombre }}</strong>
+                <small class="descripcion-regla">
+                  {{ regla.titulo }}
+                </small>
+              </td>
+
+              <td>{{ regla.tipoFenomeno }}</td>
+
+              <td>
+                <div class="condiciones">
+                  <span>
+                    {{ regla.variable }}
+                    {{ regla.operador }}
+                    {{ regla.umbral }}
+                  </span>
+
+                  <span *ngIf="regla.variableSecundaria">
+                    Y {{ regla.variableSecundaria }}
+                    {{ regla.operadorSecundario }}
+                    {{ regla.umbralSecundario }}
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <span
+                  class="etiqueta-nivel"
+                  [ngClass]="regla.nivel.toLowerCase()">
+                  {{ regla.nivel }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="etiqueta-estado"
+                  [class.activa]="regla.activa"
+                  [class.inactiva]="!regla.activa">
+                  {{ regla.activa ? 'Activa' : 'Inactiva' }}
+                </span>
+              </td>
+
+              <td *ngIf="esAdministrador">
+                <div class="acciones">
+                  <button
+                    type="button"
+                    class="btn-editar"
+                    [disabled]="guardando()"
+                    (click)="editarRegla(regla)">
+                    Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn-estado"
+                    [disabled]="guardando()"
+                    (click)="cambiarEstado(regla)">
+                    {{ regla.activa ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section *ngIf="mostrarFormulario()" class="panel-formulario">
+      <div class="formulario-encabezado">
+        <div>
+          <h2>
+            {{ idEdicion() === null ? 'Crear regla de alerta' : 'Editar regla de alerta' }}
+          </h2>
+          <p>Define las condiciones que deben cumplirse para generar una alerta.</p>
+        </div>
+
+        <button
+          type="button"
+          class="btn-cerrar"
+          (click)="cancelarFormulario()">
+          Cancelar
+        </button>
+      </div>
+
+      <form (ngSubmit)="guardarRegla()" #formRegla="ngForm">
+
+        <div class="formulario-grid">
+
+          <div class="campo campo-ancho">
+            <label for="nombre">Nombre de la regla *</label>
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              [(ngModel)]="formulario.nombre"
+              required
+              maxlength="150"
+              placeholder="Ej. Incendio - Nivel rojo">
+          </div>
+
+          <div class="campo">
+            <label for="tipoFenomeno">Fenómeno *</label>
+            <select
+              id="tipoFenomeno"
+              name="tipoFenomeno"
+              [(ngModel)]="formulario.tipoFenomeno"
+              required>
+              <option *ngFor="let fenomeno of fenomenos" [value]="fenomeno">
+                {{ fenomeno }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="nivel">Nivel de alerta *</label>
+            <select
+              id="nivel"
+              name="nivel"
+              [(ngModel)]="formulario.nivel"
+              required>
+              <option *ngFor="let nivel of niveles" [value]="nivel">
+                {{ nivel }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="variable">Variable principal *</label>
+            <select
+              id="variable"
+              name="variable"
+              [(ngModel)]="formulario.variable"
+              required>
+              <option *ngFor="let variable of variables" [value]="variable">
+                {{ variable }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="operador">Operador principal *</label>
+            <select
+              id="operador"
+              name="operador"
+              [(ngModel)]="formulario.operador"
+              required>
+              <option *ngFor="let operador of operadores" [value]="operador">
+                {{ operador }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="umbral">Umbral principal *</label>
+            <input
+              id="umbral"
+              name="umbral"
+              type="number"
+              step="any"
+              [(ngModel)]="formulario.umbral"
+              required>
+          </div>
+
+          <div class="campo campo-ancho">
+            <h3>Condición secundaria (opcional)</h3>
+            <p class="ayuda">
+              Si la configuras, ambas condiciones deberán cumplirse para generar la alerta.
+            </p>
+          </div>
+
+          <div class="campo">
+            <label for="variableSecundaria">Variable secundaria</label>
+            <select
+              id="variableSecundaria"
+              name="variableSecundaria"
+              [(ngModel)]="formulario.variableSecundaria"
+              (ngModelChange)="limpiarCondicionSecundaria()">
+              <option [ngValue]="null">Sin condición secundaria</option>
+              <option *ngFor="let variable of variables" [value]="variable">
+                {{ variable }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="operadorSecundario">Operador secundario</label>
+            <select
+              id="operadorSecundario"
+              name="operadorSecundario"
+              [(ngModel)]="formulario.operadorSecundario"
+              [disabled]="!formulario.variableSecundaria">
+              <option [ngValue]="null">Seleccionar</option>
+              <option *ngFor="let operador of operadores" [value]="operador">
+                {{ operador }}
+              </option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="umbralSecundario">Umbral secundario</label>
+            <input
+              id="umbralSecundario"
+              name="umbralSecundario"
+              type="number"
+              step="any"
+              [(ngModel)]="formulario.umbralSecundario"
+              [disabled]="!formulario.variableSecundaria">
+          </div>
+
+          <div class="campo campo-ancho">
+            <label for="titulo">Título de la alerta *</label>
+            <input
+              id="titulo"
+              name="titulo"
+              type="text"
+              [(ngModel)]="formulario.titulo"
+              required
+              placeholder="Ej. Alerta crítica por riesgo de incendio">
+          </div>
+
+          <div class="campo campo-ancho">
+            <label for="mensaje">Mensaje de la alerta *</label>
+            <textarea
+              id="mensaje"
+              name="mensaje"
+              rows="4"
+              [(ngModel)]="formulario.mensaje"
+              required
+              placeholder="Describe el riesgo y las acciones recomendadas.">
+            </textarea>
+          </div>
+
+        </div>
+
+        <div class="formulario-acciones">
+          <button
+            type="button"
+            class="btn-secundario"
+            (click)="cancelarFormulario()">
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="btn-primario"
+            [disabled]="guardando() || formRegla.invalid">
+            {{ guardando() ? 'Guardando...' : (idEdicion() === null ? 'Crear regla' : 'Guardar cambios') }}
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+  </main>
+</div>

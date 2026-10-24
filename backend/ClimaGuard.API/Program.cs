@@ -23,7 +23,17 @@ builder.Services.AddDbContext<ClimaGuardDbContext>(options =>
 // SERVICIOS
 // =====================================================
 
+
 builder.Services.AddScoped<AnalisisRiesgoService>();
+builder.Services.AddScoped<BitacoraService>();
+builder.Services.AddHttpContextAccessor();
+
+// registrar una unica instancia del simulador
+builder.Services.AddSingleton<SimuladorClimaticoService>();
+
+// ejecutar esa misma instancia como servicio en segundo plano
+builder.Services.AddHostedService(provider =>
+    provider.GetRequiredService<SimuladorClimaticoService>());
 
 // =====================================================
 // SIGNALR

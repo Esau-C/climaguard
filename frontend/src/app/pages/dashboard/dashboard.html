@@ -1,45 +1,79 @@
-<div class="contenedor">
 
+<div class="contenedor">
   <app-navbar></app-navbar>
 
   <main>
 
     <!-- encabezado -->
     <section class="bienvenida">
-
       <div>
-
-        <h1>
-          Dashboard
-        </h1>
-
-        <p>
-          Resumen general del monitoreo de ClimaGuard
-        </p>
-
+        <h1>Dashboard</h1>
+        <p>Resumen general del monitoreo de ClimaGuard</p>
       </div>
 
       <div class="monitoreo">
-
         <span class="punto"></span>
-
         Monitoreo en tiempo real
-
       </div>
-
     </section>
 
+    <!-- filtro por comunidad -->
+    <section class="estado-panel" style="margin-bottom: 20px;">
+      <div class="estado-encabezado">
+        <div>
+          <h2>Filtrar por comunidad</h2>
+          <p>
+            Consulta las estadísticas, mediciones y alertas
+            de una comunidad.
+          </p>
+        </div>
+
+        <div class="selector-variable">
+          <label for="filtro-comunidad-dashboard">
+            Comunidad
+          </label>
+
+          <select
+            id="filtro-comunidad-dashboard"
+            [value]="comunidadSeleccionada() ?? 'todas'"
+            (change)="cambiarComunidad($any($event.target).value)"
+          >
+            <option value="todas">
+              Todas las comunidades
+            </option>
+
+            <option
+              *ngFor="let comunidad of comunidades()"
+              [value]="comunidad.idComunidad"
+            >
+              {{ comunidad.nombre }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </section>
 
     <!-- estadisticas -->
     <section class="estadisticas">
 
-      <a
-        class="stat-link"
-        routerLink="/sensores"
-      >
-
+      <!-- comunidades -->
+      <a class="stat-link" routerLink="/comunidades">
         <article class="stat-card">
+          <span class="stat-label">
+            Comunidades
+          </span>
 
+          <strong>
+            {{ totalComunidades() }}
+          </strong>
+
+          <p>Comunidades registradas</p>
+        </article>
+      </a>
+
+      <!-- sensores registrados -->
+      <a class="stat-link" routerLink="/sensores">
+        <article class="stat-card">
           <span class="stat-label">
             Sensores
           </span>
@@ -48,22 +82,43 @@
             {{ totalSensores() }}
           </strong>
 
-          <p>
-            Sensores registrados
-          </p>
-
+          <p>Sensores registrados</p>
         </article>
-
       </a>
 
-
-      <a
-        class="stat-link"
-        routerLink="/lecturas"
-      >
-
+      <!-- sensores activos -->
+      <a class="stat-link" routerLink="/sensores">
         <article class="stat-card">
+          <span class="stat-label">
+            Sensores activos
+          </span>
 
+          <strong>
+            {{ totalSensoresActivos() }}
+          </strong>
+
+          <p>Dispositivos habilitados</p>
+        </article>
+      </a>
+
+      <!-- sensores inactivos -->
+      <a class="stat-link" routerLink="/sensores">
+        <article class="stat-card">
+          <span class="stat-label">
+            Sensores inactivos
+          </span>
+
+          <strong>
+            {{ totalSensoresInactivos() }}
+          </strong>
+
+          <p>Dispositivos deshabilitados</p>
+        </article>
+      </a>
+
+      <!-- lecturas -->
+      <a class="stat-link" routerLink="/lecturas">
+        <article class="stat-card">
           <span class="stat-label">
             Lecturas
           </span>
@@ -72,22 +127,13 @@
             {{ totalLecturas() }}
           </strong>
 
-          <p>
-            Mediciones almacenadas
-          </p>
-
+          <p>Mediciones almacenadas</p>
         </article>
-
       </a>
 
-
-      <a
-        class="stat-link"
-        routerLink="/alertas"
-      >
-
+      <!-- alertas activas -->
+      <a class="stat-link" routerLink="/alertas">
         <article class="stat-card alerta-activa">
-
           <span class="stat-label">
             Alertas activas
           </span>
@@ -96,22 +142,13 @@
             {{ alertasActivas() }}
           </strong>
 
-          <p>
-            Requieren monitoreo
-          </p>
-
+          <p>Requieren monitoreo</p>
         </article>
-
       </a>
 
-
-      <a
-        class="stat-link"
-        routerLink="/alertas"
-      >
-
+      <!-- alertas rojas -->
+      <a class="stat-link" routerLink="/alertas">
         <article class="stat-card alerta-roja">
-
           <span class="stat-label">
             Alertas rojas
           </span>
@@ -120,34 +157,229 @@
             {{ alertasRojas() }}
           </strong>
 
-          <p>
-            Riesgos críticos detectados
-          </p>
-
+          <p>Riesgos críticos detectados</p>
         </article>
-
       </a>
 
     </section>
 
+      <!-- distribucion de alertas por nivel -->
+      <section class="estado-panel" style="margin-bottom: 24px;">
 
-    <!-- estado actual -->
-    <section class="estado-panel">
+        <div class="estado-encabezado">
+          <div>
+            <h2>Distribución de alertas por nivel</h2>
+            <p>
+              Cantidad de alertas generadas según su nivel de riesgo.
+            </p>
+          </div>
 
-      <div class="estado-encabezado">
+          <a routerLink="/alertas" class="btn-ver-lecturas">
+            Ver alertas
+          </a>
+        </div>
 
-        <div>
+        <div class="mediciones">
 
-          <h2>
-            Estado actual del monitoreo
-          </h2>
+          <!-- alertas amarillas -->
+          <article
+            class="medicion-card"
+            style="border-left: 4px solid #eab308;"
+          >
+            <span class="medicion-label">
+              Alertas amarillas
+            </span>
 
-          <p>
-            Valores correspondientes a la lectura más reciente
-          </p>
+            <strong>
+              {{ alertasAmarillas() }}
+            </strong>
+
+            <p>Nivel de precaución</p>
+          </article>
+
+          <!-- alertas naranjas -->
+          <article
+            class="medicion-card"
+            style="border-left: 4px solid #f97316;"
+          >
+            <span class="medicion-label">
+              Alertas naranjas
+            </span>
+
+            <strong>
+              {{ alertasNaranjas() }}
+            </strong>
+
+            <p>Nivel de riesgo alto</p>
+          </article>
+
+          <!-- alertas rojas -->
+          <article
+            class="medicion-card"
+            style="border-left: 4px solid #ef4444;"
+          >
+            <span class="medicion-label">
+              Alertas rojas
+            </span>
+
+            <strong>
+              {{ alertasRojas() }}
+            </strong>
+
+            <p>Nivel de riesgo crítico</p>
+          </article>
 
         </div>
 
+      </section>
+
+
+    <!-- eventos climaticos -->
+    <section class="estado-panel" style="margin-bottom: 24px;">
+
+      <div class="estado-encabezado">
+        <div>
+          <h2>Eventos climáticos</h2>
+          <p>
+            Resumen de los eventos registrados por los sensores.
+          </p>
+        </div>
+      </div>
+
+      <!-- indicadores de eventos -->
+      <div class="mediciones">
+
+        <article class="medicion-card">
+          <span class="medicion-label">
+            Total de eventos
+          </span>
+
+          <strong>{{ totalEventos() }}</strong>
+
+          <p>Eventos registrados</p>
+        </article>
+
+        <article
+          class="medicion-card"
+          style="border-left: 4px solid #f97316;"
+        >
+          <span class="medicion-label">
+            Eventos activos
+          </span>
+
+          <strong>{{ eventosActivos() }}</strong>
+
+          <p>Eventos en seguimiento</p>
+        </article>
+
+        <article
+          class="medicion-card"
+          style="border-left: 4px solid #16a34a;"
+        >
+          <span class="medicion-label">
+            Eventos cerrados
+          </span>
+
+          <strong>{{ eventosCerrados() }}</strong>
+
+          <p>Eventos finalizados</p>
+        </article>
+
+      </div>
+
+      <!-- eventos recientes -->
+      <div style="margin-top: 24px;">
+
+        <h3 style="margin-bottom: 14px;">
+          Últimos eventos registrados
+        </h3>
+
+        <div
+          *ngIf="ultimosEventos().length === 0"
+          class="sin-alertas"
+        >
+          <p>
+            No hay eventos climáticos registrados
+            para la comunidad seleccionada.
+          </p>
+        </div>
+
+        <div
+          *ngIf="ultimosEventos().length > 0"
+          style="overflow-x: auto;"
+        >
+          <table
+            style="width: 100%; border-collapse: collapse; text-align: left;"
+          >
+            <thead>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <th style="padding: 12px;">Evento</th>
+                <th style="padding: 12px;">Fenómeno</th>
+                <th style="padding: 12px;">Nivel</th>
+                <th style="padding: 12px;">Estado</th>
+                <th style="padding: 12px;">Fecha de inicio</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                *ngFor="let evento of ultimosEventos()"
+                style="border-bottom: 1px solid #e5e7eb;"
+              >
+                <td style="padding: 12px;">
+                  #{{ evento.idEvento }}
+                </td>
+
+                <td style="padding: 12px;">
+                  {{ evento.tipoFenomeno }}
+                </td>
+
+                <td style="padding: 12px;">
+                  <strong
+                    [style.color]="
+                      evento.nivel === 'ROJO'
+                        ? '#dc2626'
+                        : evento.nivel === 'NARANJA'
+                          ? '#ea580c'
+                          : '#ca8a04'
+                    "
+                  >
+                    {{ evento.nivel }}
+                  </strong>
+                </td>
+
+                <td style="padding: 12px;">
+                  {{ evento.estado }}
+                </td>
+
+                <td style="padding: 12px;">
+                  {{
+                    evento.fechaInicio
+                      | date:'dd/MM/yyyy HH:mm:ss'
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+
+    <!-- estado actual del monitoreo -->
+    <section class="estado-panel">
+
+      <div class="estado-encabezado">
+        <div>
+          <h2>Estado actual del monitoreo</h2>
+          <p>
+            Valores correspondientes a la lectura más reciente
+          </p>
+        </div>
 
         <span
           class="estado-general"
@@ -155,14 +387,11 @@
         >
           {{ estadoGeneral() }}
         </span>
-
       </div>
-
 
       <div class="mediciones">
 
         <article class="medicion-card">
-
           <span class="medicion-label">
             Temperatura
           </span>
@@ -175,15 +404,10 @@
             }}
           </strong>
 
-          <p>
-            Temperatura registrada
-          </p>
-
+          <p>Temperatura registrada</p>
         </article>
 
-
         <article class="medicion-card">
-
           <span class="medicion-label">
             Humedad
           </span>
@@ -196,15 +420,10 @@
             }}
           </strong>
 
-          <p>
-            Humedad relativa
-          </p>
-
+          <p>Humedad relativa</p>
         </article>
 
-
         <article class="medicion-card">
-
           <span class="medicion-label">
             Velocidad del viento
           </span>
@@ -217,15 +436,10 @@
             }}
           </strong>
 
-          <p>
-            Última medición registrada
-          </p>
-
+          <p>Última medición registrada</p>
         </article>
 
-
         <article class="medicion-card">
-
           <span class="medicion-label">
             Nivel de lluvia
           </span>
@@ -238,15 +452,10 @@
             }}
           </strong>
 
-          <p>
-            Precipitación registrada
-          </p>
-
+          <p>Precipitación registrada</p>
         </article>
 
-
         <article class="medicion-card">
-
           <span class="medicion-label">
             Nivel de agua
           </span>
@@ -259,20 +468,15 @@
             }}
           </strong>
 
-          <p>
-            Nivel actual registrado
-          </p>
-
+          <p>Nivel actual registrado</p>
         </article>
 
       </div>
-
 
       <div
         *ngIf="fechaUltimaLectura()"
         class="ultima-actualizacion"
       >
-
         Última lectura:
 
         <strong>
@@ -281,29 +485,20 @@
               | date:'dd/MM/yyyy HH:mm:ss'
           }}
         </strong>
-
       </div>
 
     </section>
-
 
     <!-- grafica -->
     <section class="grafica-panel">
 
       <div class="grafica-encabezado">
-
         <div>
-
-          <h2>
-            Tendencia de las últimas lecturas
-          </h2>
-
+          <h2>Tendencia de las últimas lecturas</h2>
           <p>
             Visualización de las últimas mediciones registradas
           </p>
-
         </div>
-
 
         <a
           routerLink="/lecturas"
@@ -311,9 +506,7 @@
         >
           Ver lecturas
         </a>
-
       </div>
-
 
       <div
         *ngIf="ultimasLecturas().length > 0"
@@ -324,20 +517,12 @@
         <div class="grafica-controles">
 
           <div class="selector-variable">
-
-            <label>
-              Variable a visualizar
-            </label>
+            <label>Variable a visualizar</label>
 
             <select
               [value]="variableGrafica()"
-              (change)="
-                cambiarVariableGrafica(
-                  $any($event.target).value
-                )
-              "
+              (change)="cambiarVariableGrafica($any($event.target).value)"
             >
-
               <option value="todas">
                 Todas las variables
               </option>
@@ -361,83 +546,46 @@
               <option value="agua">
                 Nivel de agua
               </option>
-
             </select>
-
           </div>
-
 
           <!-- leyenda completa -->
           <div
             *ngIf="mostrarTodas()"
             class="grafica-leyenda"
           >
-
             <span class="leyenda-item">
-
-              <span
-                class="leyenda-linea temperatura"
-              ></span>
-
+              <span class="leyenda-linea temperatura"></span>
               Temperatura
-
             </span>
 
-
             <span class="leyenda-item">
-
-              <span
-                class="leyenda-linea humedad"
-              ></span>
-
+              <span class="leyenda-linea humedad"></span>
               Humedad
-
             </span>
 
-
             <span class="leyenda-item">
-
-              <span
-                class="leyenda-linea viento"
-              ></span>
-
+              <span class="leyenda-linea viento"></span>
               Viento
-
             </span>
 
-
             <span class="leyenda-item">
-
-              <span
-                class="leyenda-linea lluvia"
-              ></span>
-
+              <span class="leyenda-linea lluvia"></span>
               Lluvia
-
             </span>
-
 
             <span class="leyenda-item">
-
-              <span
-                class="leyenda-linea agua"
-              ></span>
-
+              <span class="leyenda-linea agua"></span>
               Nivel de agua
-
             </span>
-
           </div>
-
 
           <!-- leyenda individual -->
           <div
             *ngIf="!mostrarTodas()"
             class="grafica-leyenda"
           >
-
             <span class="leyenda-item">
-
               <span
                 class="leyenda-linea"
                 [ngClass]="claseVariableGrafica()"
@@ -445,18 +593,13 @@
 
               {{ nombreVariableGrafica() }}
 
-              <span
-                *ngIf="unidadVariableGrafica()"
-              >
+              <span *ngIf="unidadVariableGrafica()">
                 ({{ unidadVariableGrafica() }})
               </span>
-
             </span>
-
           </div>
 
         </div>
-
 
         <!-- contenedor grafica -->
         <div class="grafica-svg-contenedor">
@@ -468,376 +611,216 @@
           >
 
             <!-- lineas guia -->
-
             <line
-              x1="25"
-              y1="20"
-              x2="975"
-              y2="20"
+              x1="25" y1="20"
+              x2="975" y2="20"
               class="linea-guia"
             />
 
             <line
-              x1="25"
-              y1="75"
-              x2="975"
-              y2="75"
+              x1="25" y1="75"
+              x2="975" y2="75"
               class="linea-guia"
             />
 
             <line
-              x1="25"
-              y1="130"
-              x2="975"
-              y2="130"
+              x1="25" y1="130"
+              x2="975" y2="130"
               class="linea-guia"
             />
 
             <line
-              x1="25"
-              y1="185"
-              x2="975"
-              y2="185"
+              x1="25" y1="185"
+              x2="975" y2="185"
               class="linea-guia"
             />
 
             <line
-              x1="25"
-              y1="240"
-              x2="975"
-              y2="240"
+              x1="25" y1="240"
+              x2="975" y2="240"
               class="linea-guia"
             />
 
-
-            <!-- todas -->
-            <ng-container
-              *ngIf="mostrarTodas()"
-            >
+            <!-- todas las variables -->
+            <ng-container *ngIf="mostrarTodas()">
 
               <!-- temperatura -->
-
               <polyline
                 [attr.points]="puntosTemperatura()"
                 class="linea-variable temperatura"
-              >
-              </polyline>
-
+              ></polyline>
 
               <circle
-                *ngFor="
-                  let punto of coordenadasTemperatura()
-                "
+                *ngFor="let punto of coordenadasTemperatura()"
                 [attr.cx]="punto.x"
                 [attr.cy]="punto.y"
                 r="7"
                 class="punto-grafica punto-temperatura"
-                (mouseenter)="
-                  mostrarTooltip(
-                    punto,
-                    'Temperatura',
-                    '°C'
-                  )
-                "
+                (mouseenter)="mostrarTooltip(punto, 'Temperatura', '°C')"
                 (mouseleave)="ocultarTooltip()"
-              >
-              </circle>
-
+              ></circle>
 
               <!-- humedad -->
-
               <polyline
                 [attr.points]="puntosHumedad()"
                 class="linea-variable humedad"
-              >
-              </polyline>
-
+              ></polyline>
 
               <circle
-                *ngFor="
-                  let punto of coordenadasHumedad()
-                "
+                *ngFor="let punto of coordenadasHumedad()"
                 [attr.cx]="punto.x"
                 [attr.cy]="punto.y"
                 r="7"
                 class="punto-grafica punto-humedad"
-                (mouseenter)="
-                  mostrarTooltip(
-                    punto,
-                    'Humedad',
-                    '%'
-                  )
-                "
+                (mouseenter)="mostrarTooltip(punto, 'Humedad', '%')"
                 (mouseleave)="ocultarTooltip()"
-              >
-              </circle>
-
+              ></circle>
 
               <!-- viento -->
-
               <polyline
                 [attr.points]="puntosViento()"
                 class="linea-variable viento"
-              >
-              </polyline>
-
+              ></polyline>
 
               <circle
-                *ngFor="
-                  let punto of coordenadasViento()
-                "
+                *ngFor="let punto of coordenadasViento()"
                 [attr.cx]="punto.x"
                 [attr.cy]="punto.y"
                 r="7"
                 class="punto-grafica punto-viento"
-                (mouseenter)="
-                  mostrarTooltip(
-                    punto,
-                    'Velocidad del viento'
-                  )
-                "
+                (mouseenter)="mostrarTooltip(punto, 'Velocidad del viento')"
                 (mouseleave)="ocultarTooltip()"
-              >
-              </circle>
-
+              ></circle>
 
               <!-- lluvia -->
-
               <polyline
                 [attr.points]="puntosLluvia()"
                 class="linea-variable lluvia"
-              >
-              </polyline>
-
+              ></polyline>
 
               <circle
-                *ngFor="
-                  let punto of coordenadasLluvia()
-                "
+                *ngFor="let punto of coordenadasLluvia()"
                 [attr.cx]="punto.x"
                 [attr.cy]="punto.y"
                 r="7"
                 class="punto-grafica punto-lluvia"
-                (mouseenter)="
-                  mostrarTooltip(
-                    punto,
-                    'Nivel de lluvia'
-                  )
-                "
+                (mouseenter)="mostrarTooltip(punto, 'Nivel de lluvia')"
                 (mouseleave)="ocultarTooltip()"
-              >
-              </circle>
-
+              ></circle>
 
               <!-- agua -->
-
               <polyline
                 [attr.points]="puntosAgua()"
                 class="linea-variable agua"
-              >
-              </polyline>
-
+              ></polyline>
 
               <circle
-                *ngFor="
-                  let punto of coordenadasAgua()
-                "
+                *ngFor="let punto of coordenadasAgua()"
                 [attr.cx]="punto.x"
                 [attr.cy]="punto.y"
                 r="7"
                 class="punto-grafica punto-agua"
-                (mouseenter)="
-                  mostrarTooltip(
-                    punto,
-                    'Nivel de agua'
-                  )
-                "
+                (mouseenter)="mostrarTooltip(punto, 'Nivel de agua')"
                 (mouseleave)="ocultarTooltip()"
-              >
-              </circle>
+              ></circle>
 
             </ng-container>
 
-
             <!-- variable individual -->
-            <ng-container
-              *ngIf="!mostrarTodas()"
-            >
+            <ng-container *ngIf="!mostrarTodas()">
 
               <polyline
                 [attr.points]="puntosGrafica()"
                 class="linea-variable"
                 [ngClass]="claseVariableGrafica()"
-              >
-              </polyline>
-
+              ></polyline>
 
               <!-- temperatura -->
-
               <ng-container
-                *ngIf="
-                  variableGrafica() === 'temperatura'
-                "
+                *ngIf="variableGrafica() === 'temperatura'"
               >
-
                 <circle
-                  *ngFor="
-                    let punto of coordenadasGrafica()
-                  "
+                  *ngFor="let punto of coordenadasGrafica()"
                   [attr.cx]="punto.x"
                   [attr.cy]="punto.y"
                   r="8"
                   class="punto-grafica punto-temperatura"
-                  (mouseenter)="
-                    mostrarTooltip(
-                      punto,
-                      'Temperatura',
-                      '°C'
-                    )
-                  "
+                  (mouseenter)="mostrarTooltip(punto, 'Temperatura', '°C')"
                   (mouseleave)="ocultarTooltip()"
-                >
-                </circle>
-
+                ></circle>
               </ng-container>
 
-
               <!-- humedad -->
-
               <ng-container
-                *ngIf="
-                  variableGrafica() === 'humedad'
-                "
+                *ngIf="variableGrafica() === 'humedad'"
               >
-
                 <circle
-                  *ngFor="
-                    let punto of coordenadasGrafica()
-                  "
+                  *ngFor="let punto of coordenadasGrafica()"
                   [attr.cx]="punto.x"
                   [attr.cy]="punto.y"
                   r="8"
                   class="punto-grafica punto-humedad"
-                  (mouseenter)="
-                    mostrarTooltip(
-                      punto,
-                      'Humedad',
-                      '%'
-                    )
-                  "
+                  (mouseenter)="mostrarTooltip(punto, 'Humedad', '%')"
                   (mouseleave)="ocultarTooltip()"
-                >
-                </circle>
-
+                ></circle>
               </ng-container>
 
-
               <!-- viento -->
-
               <ng-container
-                *ngIf="
-                  variableGrafica() === 'viento'
-                "
+                *ngIf="variableGrafica() === 'viento'"
               >
-
                 <circle
-                  *ngFor="
-                    let punto of coordenadasGrafica()
-                  "
+                  *ngFor="let punto of coordenadasGrafica()"
                   [attr.cx]="punto.x"
                   [attr.cy]="punto.y"
                   r="8"
                   class="punto-grafica punto-viento"
-                  (mouseenter)="
-                    mostrarTooltip(
-                      punto,
-                      'Velocidad del viento'
-                    )
-                  "
+                  (mouseenter)="mostrarTooltip(punto, 'Velocidad del viento')"
                   (mouseleave)="ocultarTooltip()"
-                >
-                </circle>
-
+                ></circle>
               </ng-container>
 
-
               <!-- lluvia -->
-
               <ng-container
-                *ngIf="
-                  variableGrafica() === 'lluvia'
-                "
+                *ngIf="variableGrafica() === 'lluvia'"
               >
-
                 <circle
-                  *ngFor="
-                    let punto of coordenadasGrafica()
-                  "
+                  *ngFor="let punto of coordenadasGrafica()"
                   [attr.cx]="punto.x"
                   [attr.cy]="punto.y"
                   r="8"
                   class="punto-grafica punto-lluvia"
-                  (mouseenter)="
-                    mostrarTooltip(
-                      punto,
-                      'Nivel de lluvia'
-                    )
-                  "
+                  (mouseenter)="mostrarTooltip(punto, 'Nivel de lluvia')"
                   (mouseleave)="ocultarTooltip()"
-                >
-                </circle>
-
+                ></circle>
               </ng-container>
 
-
               <!-- agua -->
-
               <ng-container
-                *ngIf="
-                  variableGrafica() === 'agua'
-                "
+                *ngIf="variableGrafica() === 'agua'"
               >
-
                 <circle
-                  *ngFor="
-                    let punto of coordenadasGrafica()
-                  "
+                  *ngFor="let punto of coordenadasGrafica()"
                   [attr.cx]="punto.x"
                   [attr.cy]="punto.y"
                   r="8"
                   class="punto-grafica punto-agua"
-                  (mouseenter)="
-                    mostrarTooltip(
-                      punto,
-                      'Nivel de agua'
-                    )
-                  "
+                  (mouseenter)="mostrarTooltip(punto, 'Nivel de agua')"
                   (mouseleave)="ocultarTooltip()"
-                >
-                </circle>
-
+                ></circle>
               </ng-container>
 
             </ng-container>
 
           </svg>
 
-
-          <!-- tooltip personalizado -->
-
+          <!-- tooltip -->
           <div
             class="tooltip-grafica"
-            [class.visible]="
-              tooltipGrafica().visible
-            "
-            [style.left]="
-              tooltipGrafica().left
-            "
-            [style.top]="
-              tooltipGrafica().top
-            "
+            [class.visible]="tooltipGrafica().visible"
+            [style.left]="tooltipGrafica().left"
+            [style.top]="tooltipGrafica().top"
           >
-
             <strong>
               {{ tooltipGrafica().titulo }}
             </strong>
@@ -847,81 +830,52 @@
             </span>
 
             <small>
-              Hora:
-              {{ tooltipGrafica().hora }}
+              Hora: {{ tooltipGrafica().hora }}
             </small>
-
           </div>
 
         </div>
 
-
         <!-- horas -->
-        <div class="grafica-fechas">
-
-          <span
-            *ngFor="
-              let lectura of ultimasLecturas()
-            "
-          >
-            {{
-              lectura.fechaLectura
-                | date:'HH:mm'
-            }}
-          </span>
-
-        </div>
-
+      <div class="grafica-fechas">
+        <span *ngFor="let lectura of ultimasLecturas()">
+          {{ lectura.fechaLectura | date:'HH:mm':'-0600' }}
+        </span>
       </div>
+      </div> <!-- cierre de grafica-contenido -->
 
-
-      <!-- sin datos -->
+      <!-- sin lecturas -->
       <div
-        *ngIf="
-          ultimasLecturas().length === 0
-        "
+        *ngIf="ultimasLecturas().length === 0"
         class="sin-datos-grafica"
       >
-
         No hay lecturas disponibles para mostrar la gráfica.
-
       </div>
 
-    </section>
+      
 
+    </section>
 
     <!-- alertas -->
     <section class="panel">
 
       <div class="panel-titulo">
-
         <div>
-
-          <h2>
-            Alertas en tiempo real
-          </h2>
-
+          <h2>Alertas en tiempo real</h2>
           <p>
             Eventos detectados automáticamente por los sensores
           </p>
-
         </div>
 
-
         <div class="panel-acciones">
-
           <span class="contador">
-
             {{ alertasTiempoReal().length }}
-
             {{
               alertasTiempoReal().length === 1
                 ? 'alerta'
                 : 'alertas'
             }}
-
           </span>
-
 
           <a
             routerLink="/alertas"
@@ -929,108 +883,72 @@
           >
             Ver historial completo
           </a>
-
         </div>
-
       </div>
-
 
       <!-- sin alertas -->
       <div
-        *ngIf="
-          alertasTiempoReal().length === 0
-        "
+        *ngIf="alertasTiempoReal().length === 0"
         class="sin-alertas"
       >
-
-        <h3>
-          Sin nuevas alertas
-        </h3>
-
+        <h3>Sin nuevas alertas</h3>
         <p>
           Las nuevas alertas aparecerán aquí automáticamente.
         </p>
-
       </div>
 
-
-      <!-- lista -->
+      <!-- listado de alertas -->
       <div
-        *ngIf="
-          alertasTiempoReal().length > 0
-        "
+        *ngIf="alertasTiempoReal().length > 0"
         class="lista-alertas"
       >
 
         <article
-          *ngFor="
-            let alerta of alertasTiempoReal()
-          "
+          *ngFor="let alerta of alertasTiempoReal()"
           class="alerta"
-          [class.rojo]="
-            alerta.nivel === 'ROJO'
-          "
-          [class.naranja]="
-            alerta.nivel === 'NARANJA'
-          "
-          [class.amarillo]="
-            alerta.nivel === 'AMARILLO'
-          "
+          [class.rojo]="alerta.nivel === 'ROJO'"
+          [class.naranja]="alerta.nivel === 'NARANJA'"
+          [class.amarillo]="alerta.nivel === 'AMARILLO'"
         >
 
           <div class="alerta-superior">
-
             <div class="alerta-etiquetas">
 
               <span class="nivel">
                 {{ alerta.nivel }}
               </span>
 
-
               <span
                 class="estado-alerta"
-                [class.estado-activa]="
-                  alerta.estado === 'ACTIVA'
-                "
-                [class.estado-atendida]="
-                  alerta.estado === 'ATENDIDA'
-                "
+                [class.estado-activa]="alerta.estado === 'ACTIVA'"
+                [class.estado-atendida]="alerta.estado === 'ATENDIDA'"
               >
                 {{ alerta.estado }}
               </span>
 
             </div>
 
-
             <span class="fecha">
-
               {{
                 alerta.fechaGeneracion
                   | date:'dd/MM/yyyy HH:mm:ss'
               }}
-
             </span>
-
           </div>
-
 
           <h3>
             {{ alerta.titulo }}
           </h3>
 
-
           <p class="fenomeno">
             {{ alerta.tipoFenomeno }}
           </p>
-
 
           <p class="mensaje-alerta">
             {{ alerta.mensaje }}
           </p>
 
-
           <div class="datos">
-
             <span>
               Sensor #{{ alerta.idSensor }}
             </span>
@@ -1038,7 +956,6 @@
             <span>
               Lectura #{{ alerta.idLectura }}
             </span>
-
           </div>
 
         </article>
@@ -1048,5 +965,4 @@
     </section>
 
   </main>
-
 </div>

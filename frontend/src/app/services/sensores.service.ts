@@ -2,34 +2,58 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface ComunidadSensor {
+  idComunidad: number;
+  nombre: string;
+  municipio: string;
+  departamento: string;
+  pais: string;
+  latitud: number | null;
+  longitud: number | null;
+  activa: boolean;
+}
+
 export interface Sensor {
   idSensor: number;
   nombre: string;
+  codigo: string;
   tipo: string;
+  idComunidad: number;
   ubicacion: string;
+  unidadMedida: string;
   latitud: number;
   longitud: number;
   activo: boolean;
+  fechaInstalacion: string | null;
+  descripcion: string | null;
   fechaRegistro: string;
+  comunidad: ComunidadSensor | null;
 }
 
 export interface SensorCrear {
   nombre: string;
+  codigo: string;
   tipo: string;
+  idComunidad: number;
   ubicacion: string;
+  unidadMedida: string;
   latitud: number;
   longitud: number;
+  fechaInstalacion?: string | null;
+  descripcion?: string | null;
 }
 
 export interface SensorActualizar {
-  idSensor: number;
   nombre: string;
+  codigo: string;
   tipo: string;
+  idComunidad: number;
   ubicacion: string;
+  unidadMedida: string;
   latitud: number;
   longitud: number;
-  activo: boolean;
-  fechaRegistro: string;
+  fechaInstalacion?: string | null;
+  descripcion?: string | null;
 }
 
 export interface RespuestaEstadoSensor {
@@ -51,12 +75,16 @@ export class SensoresService {
   ) {}
 
   obtenerSensores(): Observable<Sensor[]> {
+
     return this.http.get<Sensor[]>(
       this.apiUrl
     );
   }
 
-  obtenerSensor(id: number): Observable<Sensor> {
+  obtenerSensor(
+    id: number
+  ): Observable<Sensor> {
+
     return this.http.get<Sensor>(
       `${this.apiUrl}/${id}`
     );
@@ -93,7 +121,7 @@ export class SensoresService {
       null,
       {
         params: {
-          activo: activo
+          activo
         }
       }
     );

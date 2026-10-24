@@ -1,7 +1,7 @@
+
 using Microsoft.AspNetCore.Authorization;
 using ClimaGuard.API.Data;
 using ClimaGuard.API.DTOs;
-using ClimaGuard.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,10 +19,12 @@ namespace ClimaGuard.API.Controllers
             _context = context;
         }
 
+        // consultar todas las bitacoras
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BitacoraDto>>> GetBitacoras()
         {
             var bitacoras = await _context.Bitacoras
+                .AsNoTracking()
                 .OrderByDescending(b => b.Fecha)
                 .Select(b => new BitacoraDto
                 {
@@ -53,10 +55,12 @@ namespace ClimaGuard.API.Controllers
             return Ok(bitacoras);
         }
 
+        // consultar una bitacora por id
         [HttpGet("{id}")]
         public async Task<ActionResult<BitacoraDto>> GetBitacora(long id)
         {
             var bitacora = await _context.Bitacoras
+                .AsNoTracking()
                 .Where(b => b.IdBitacora == id)
                 .Select(b => new BitacoraDto
                 {
@@ -86,51 +90,10 @@ namespace ClimaGuard.API.Controllers
 
             if (bitacora == null)
             {
-                return NotFound();
+                return NotFound("El registro de bitacora no existe.");
             }
 
             return Ok(bitacora);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<Bitacora>> CrearBitacora(Bitacora bitacora)
-        {
-            var usuarioExiste = await _context.Usuarios
-                .AnyAsync(u => u.IdUsuario == bitacora.IdUsuario);
-
-            if (!usuarioExiste)
-            {
-                return BadRequest("El usuario especificado no existe.");
-            }
-
-            bitacora.Fecha = DateTime.UtcNow;
-
-            _context.Bitacoras.Add(bitacora);
-
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(
-                nameof(GetBitacora),
-                new { id = bitacora.IdBitacora },
-                bitacora
-            );
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> EliminarBitacora(long id)
-        {
-            var bitacora = await _context.Bitacoras.FindAsync(id);
-
-            if (bitacora == null)
-            {
-                return NotFound();
-            }
-
-            _context.Bitacoras.Remove(bitacora);
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
     }
 }

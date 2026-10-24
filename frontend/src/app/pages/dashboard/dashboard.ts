@@ -1,3 +1,4 @@
+
 import {
   Component,
   OnDestroy,
@@ -6,26 +7,18 @@ import {
   signal
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
-import {
-  RouterLink
-} from '@angular/router';
-
-import {
-  Navbar
-} from '../../components/navbar/navbar';
+import { Navbar } from '../../components/navbar/navbar';
 
 import {
   AlertaSignalR,
   SignalrService
 } from '../../services/signalr.service';
 
-import {
-  SensoresService
-} from '../../services/sensores.service';
+import { SensoresService } from '../../services/sensores.service';
 
 import {
   Lectura,
@@ -37,6 +30,15 @@ import {
   AlertasService
 } from '../../services/alertas.service';
 
+import {
+  Comunidad,
+  ComunidadesService
+} from '../../services/comunidades.service';
+
+import {
+  Evento,
+  EventosService
+} from '../../services/eventos.service';
 
 type VariableGrafica =
   | 'todas'
@@ -46,14 +48,12 @@ type VariableGrafica =
   | 'lluvia'
   | 'agua';
 
-
 interface PuntoGrafica {
   x: number;
   y: number;
   valor: number;
   indice: number;
 }
-
 
 interface TooltipGrafica {
   visible: boolean;
@@ -64,6 +64,11 @@ interface TooltipGrafica {
   hora: string;
 }
 
+interface SensorDashboard {
+  idSensor: number;
+  idComunidad: number | null;
+  activo: boolean;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -78,79 +83,383 @@ interface TooltipGrafica {
 })
 export class Dashboard implements OnInit, OnDestroy {
 
-  alertasTiempoReal =
-    signal<AlertaSignalR[]>([]);
+  // comunidades y filtros
+  comunidades = signal<Comunidad[]>([]);
+  comunidadSeleccionada = signal<number | null>(null);
 
+  totalComunidades = computed(() =>
+    this.comunidades().length
+  );
 
-  totalSensores =
-    signal(0);
+  private sensoresOriginales: SensorDashboard[] = [];
+  private lecturasOriginales: Lectura[] = [];
+  private alertasOriginales: Alerta[] = [];
+  private eventosOriginales: Evento[] = [];
 
-  totalLecturas =
-    signal(0);
+  private suscripcionAlertas?: Subscription;
 
-  alertasActivas =
-    signal(0);
+  // estadisticas
+  totalSensores = signal(0);
+  totalSensoresActivos = signal(0);
+  totalSensoresInactivos = signal(0);
+  totalLecturas = signal(0);
 
-  alertasRojas =
-    signal(0);
+  alertasActivas = signal(0);
+  alertasAmarillas = signal(0);
+  alertasNaranjas = signal(0);
+  alertasRojas = signal(0);
 
+  // eventos climaticos
+  totalEventos = signal(0);
+  eventosActivos = signal(0);
+  eventosCerrados = signal(0);
+  ultimosEventos = signal<Evento[]>([]);
 
-  ultimaTemperatura =
-    signal<number | null>(null);
+  // alertas recientes
+  alertasTiempoReal = signal<AlertaSignalR[]>([]);
 
-  ultimaHumedad =
-    signal<number | null>(null);
+  // ultima lectura
+  ultimaTemperatura = signal<number | null>(null);
+  ultimaHumedad = signal<number | null>(null);
+  ultimoNivelAgua = signal<number | null>(null);
+  ultimaVelocidadViento = signal<number | null>(null);
+  ultimoNivelLluvia = signal<number | null>(null);
+  fechaUltimaLectura = signal<string | null>(null);
 
-  ultimoNivelAgua =
-    signal<number | null>(null);
+  // grafica
+  ultimasLecturas = signal<Lectura[]>([]);
+  variableGrafica = signal<VariableGrafica>('todas');
 
-  ultimaVelocidadViento =
-    signal<number | null>(null);
+  tooltipGrafica = signal<TooltipGrafica>({
+    visible: false,
+    left: '0%',
+    top: '0%',
+    titulo: '',
+    valor: '',
+    hora: ''
+  });
 
-  ultimoNivelLluvia =
-    signal<number | null>(null);
+  constructor(
+    private signalrService: SignalrService,
+    private sensoresService: SensoresService,
+    private lecturasService: LecturasService,
+    private alertasService: AlertasService,
+    private comunidadesService: ComunidadesService,
+    private eventosService: EventosService
+  ) {}
 
-  fechaUltimaLectura =
-    signal<string | null>(null);
+  ngOnInit(): void {
 
-
-  ultimasLecturas =
-    signal<Lectura[]>([]);
-
-
-  variableGrafica =
-    signal<VariableGrafica>('todas');
-
-
-  tooltipGrafica =
-    signal<TooltipGrafica>({
-      visible: false,
-      left: '0%',
-      top: '0%',
-      titulo: '',
-      valor: '',
-      hora: ''
+    this.comunidadesService.obtenerComunidades().subscribe({
+      next: comunidades => {
+        this.comunidades.set(comunidades);
+      },
+      error: error => {
+        console.error('Error al cargar comunidades:', error);
+      }
     });
 
+    this.cargarEstadisticas();
+    this.cargarEventos();
 
-  /* =========================================
-     ESTADO GENERAL
-  ========================================= */
+    this.signalrService.iniciarConexion();
 
+    this.suscripcionAlertas =
+      this.signalrService.nuevaAlerta$.subscribe(() => {
+        this.actualizarEstadisticas();
+        this.cargarEventos();
+      });
+  }
+
+  // cambiar comunidad seleccionada
+  cambiarComunidad(valor: string): void {
+
+    const idComunidad =
+      valor === 'todas' ? null : Number(valor);
+
+    this.comunidadSeleccionada.set(idComunidad);
+
+    this.aplicarFiltros();
+    this.ocultarTooltip();
+  }
+
+  // obtener los sensores de la comunidad seleccionada
+  private idsSensoresFiltrados(): Set<number> {
+
+    const comunidad = this.comunidadSeleccionada();
+
+    return new Set(
+      this.sensoresOriginales
+        .filter(sensor =>
+          comunidad === null ||
+          sensor.idComunidad === comunidad
+        )
+        .map(sensor => sensor.idSensor)
+    );
+  }
+
+  // aplicar filtros a todas las secciones
+  private aplicarFiltros(): void {
+
+    const ids = this.idsSensoresFiltrados();
+
+    const sensores = this.sensoresOriginales.filter(
+      sensor => ids.has(sensor.idSensor)
+    );
+
+    const lecturas = this.lecturasOriginales.filter(
+      lectura => ids.has(lectura.idSensor)
+    );
+
+    const alertas = this.alertasOriginales.filter(
+      alerta => ids.has(alerta.idSensor)
+    );
+
+    // filtrar eventos por comunidad
+    const eventos = this.eventosOriginales.filter(
+      evento => ids.has(evento.idSensor)
+    );
+
+    // indicadores de eventos climaticos
+    this.totalEventos.set(eventos.length);
+
+    this.eventosActivos.set(
+      eventos.filter(evento =>
+        evento.estado === 'ACTIVO'
+      ).length
+    );
+
+    this.eventosCerrados.set(
+      eventos.filter(evento =>
+        evento.estado === 'CERRADO'
+      ).length
+    );
+
+    // ultimos cinco eventos
+    this.ultimosEventos.set(
+      [...eventos]
+        .sort((a, b) =>
+          new Date(b.fechaInicio).getTime() -
+          new Date(a.fechaInicio).getTime()
+        )
+        .slice(0, 5)
+    );
+
+    // indicadores de sensores
+    this.totalSensores.set(sensores.length);
+
+    this.totalSensoresActivos.set(
+      sensores.filter(sensor =>
+        sensor.activo === true
+      ).length
+    );
+
+    this.totalSensoresInactivos.set(
+      sensores.filter(sensor =>
+        sensor.activo === false
+      ).length
+    );
+
+    // indicadores de lecturas
+    this.totalLecturas.set(lecturas.length);
+
+    // indicadores de alertas
+    this.alertasActivas.set(
+      alertas.filter(alerta =>
+        alerta.estado === 'ACTIVA'
+      ).length
+    );
+
+    this.alertasAmarillas.set(
+      alertas.filter(alerta =>
+        alerta.nivel === 'AMARILLO'
+      ).length
+    );
+
+    this.alertasNaranjas.set(
+      alertas.filter(alerta =>
+        alerta.nivel === 'NARANJA'
+      ).length
+    );
+
+    this.alertasRojas.set(
+      alertas.filter(alerta =>
+        alerta.nivel === 'ROJO'
+      ).length
+    );
+
+    // ultima lectura de la comunidad
+    this.actualizarUltimaLectura(lecturas);
+
+    // seleccionar un sensor para evitar mezclar
+    // diferentes sensores en una misma serie
+    this.actualizarGrafica(lecturas);
+
+    // ultimas cinco alertas filtradas
+    const ultimasAlertas = [...alertas]
+      .sort((a, b) =>
+        new Date(b.fechaGeneracion).getTime() -
+        new Date(a.fechaGeneracion).getTime()
+      )
+      .slice(0, 5)
+      .map((alerta): AlertaSignalR => ({
+        idAlerta: alerta.idAlerta,
+        idSensor: alerta.idSensor,
+        idLectura: alerta.idLectura,
+        tipoFenomeno: alerta.tipoFenomeno,
+        nivel: alerta.nivel,
+        titulo: alerta.titulo,
+        mensaje: alerta.mensaje,
+        estado: alerta.estado,
+        fechaGeneracion: alerta.fechaGeneracion
+      }));
+
+    this.alertasTiempoReal.set(ultimasAlertas);
+  }
+
+  // cargar eventos desde el backend
+  cargarEventos(): void {
+
+    this.eventosService.obtenerEventos().subscribe({
+      next: eventos => {
+        this.eventosOriginales = eventos;
+        this.aplicarFiltros();
+      },
+      error: error => {
+        console.error('Error al cargar eventos:', error);
+      }
+    });
+  }
+
+  // cargar sensores y sus estados
+  cargarEstadisticas(): void {
+
+    this.sensoresService.obtenerSensores().subscribe({
+      next: sensores => {
+
+        this.sensoresOriginales = sensores.map(sensor => ({
+          idSensor: sensor.idSensor,
+          idComunidad: sensor.idComunidad ?? null,
+          activo: sensor.activo
+        }));
+
+        this.aplicarFiltros();
+      },
+      error: error => {
+        console.error('Error al cargar sensores:', error);
+      }
+    });
+
+    this.actualizarEstadisticas();
+  }
+
+  // refrescar lecturas y alertas
+  actualizarEstadisticas(): void {
+
+    this.lecturasService.obtenerLecturas().subscribe({
+      next: lecturas => {
+
+        this.lecturasOriginales = lecturas;
+        this.aplicarFiltros();
+      },
+      error: error => {
+        console.error('Error al cargar lecturas:', error);
+      }
+    });
+
+    this.cargarUltimasAlertas();
+  }
+
+  cargarUltimasAlertas(): void {
+
+    this.alertasService.obtenerAlertas().subscribe({
+      next: alertas => {
+
+        this.alertasOriginales = alertas;
+        this.aplicarFiltros();
+      },
+      error: error => {
+        console.error('Error al cargar alertas:', error);
+      }
+    });
+  }
+
+  
+  // actualizar la ultima lectura disponible de cada variable
+  actualizarUltimaLectura(lecturas: Lectura[]): void {
+
+    const ordenadas = [...lecturas].sort((a, b) =>
+      new Date(b.fechaLectura).getTime() -
+      new Date(a.fechaLectura).getTime()
+    );
+
+    // buscar el valor mas reciente de cada variable
+    const temperatura = ordenadas.find(
+      lectura => lectura.temperatura != null
+    );
+
+    const humedad = ordenadas.find(
+      lectura => lectura.humedad != null
+    );
+
+    const viento = ordenadas.find(
+      lectura => lectura.velocidadViento != null
+    );
+
+    const lluvia = ordenadas.find(
+      lectura => lectura.nivelLluvia != null
+    );
+
+    const agua = ordenadas.find(
+      lectura => lectura.nivelAgua != null
+    );
+
+    this.ultimaTemperatura.set(
+      temperatura?.temperatura == null
+        ? null
+        : Number(temperatura.temperatura)
+    );
+
+    this.ultimaHumedad.set(
+      humedad?.humedad == null
+        ? null
+        : Number(humedad.humedad)
+    );
+
+    this.ultimaVelocidadViento.set(
+      viento?.velocidadViento == null
+        ? null
+        : Number(viento.velocidadViento)
+    );
+
+    this.ultimoNivelLluvia.set(
+      lluvia?.nivelLluvia == null
+        ? null
+        : Number(lluvia.nivelLluvia)
+    );
+
+    this.ultimoNivelAgua.set(
+      agua?.nivelAgua == null
+        ? null
+        : Number(agua.nivelAgua)
+    );
+
+    // fecha de la lectura mas reciente
+    this.fechaUltimaLectura.set(
+      ordenadas.length > 0
+        ? ordenadas[0].fechaLectura
+        : null
+    );
+  }
+
+  // calcular estado general
   estadoGeneral = computed(() => {
 
-    const temperatura =
-      this.ultimaTemperatura();
-
-    const viento =
-      this.ultimaVelocidadViento();
-
-    const lluvia =
-      this.ultimoNivelLluvia();
-
-    const nivelAgua =
-      this.ultimoNivelAgua();
-
+    const temperatura = this.ultimaTemperatura();
+    const humedad = this.ultimaHumedad();
+    const viento = this.ultimaVelocidadViento();
+    const lluvia = this.ultimoNivelLluvia();
+    const nivelAgua = this.ultimoNivelAgua();
 
     if (
       temperatura === null &&
@@ -161,89 +470,111 @@ export class Dashboard implements OnInit, OnDestroy {
       return 'SIN DATOS';
     }
 
-
-    // rojo
+    // riesgo critico
     if (
       (
         temperatura !== null &&
-        temperatura >= 45
+        temperatura >= 45 &&
+        humedad !== null &&
+        humedad <= 30
       ) ||
-      (
-        viento !== null &&
-        viento >= 80
-      ) ||
-      (
-        lluvia !== null &&
-        lluvia >= 80
-      ) ||
-      (
-        nivelAgua !== null &&
-        nivelAgua >= 3
-      )
+      (viento !== null && viento >= 80) ||
+      (lluvia !== null && lluvia >= 80) ||
+      (nivelAgua !== null && nivelAgua >= 3)
     ) {
       return 'CRÍTICO';
     }
 
-
-    // naranja
+    // riesgo alto
     if (
       (
         temperatura !== null &&
-        temperatura >= 40
+        temperatura >= 40 &&
+        humedad !== null &&
+        humedad <= 45
       ) ||
-      (
-        viento !== null &&
-        viento >= 60
-      ) ||
-      (
-        lluvia !== null &&
-        lluvia >= 50
-      ) ||
-      (
-        nivelAgua !== null &&
-        nivelAgua >= 2
-      )
+      (viento !== null && viento >= 60) ||
+      (lluvia !== null && lluvia >= 50) ||
+      (nivelAgua !== null && nivelAgua >= 2)
     ) {
       return 'ALTO';
     }
 
-
-    // amarillo
+    // precaucion
     if (
       (
         temperatura !== null &&
-        temperatura >= 35
+        temperatura >= 35 &&
+        humedad !== null &&
+        humedad <= 60
       ) ||
-      (
-        viento !== null &&
-        viento >= 40
-      ) ||
-      (
-        lluvia !== null &&
-        lluvia >= 30
-      ) ||
-      (
-        nivelAgua !== null &&
-        nivelAgua >= 1.5
-      )
+      (viento !== null && viento >= 40) ||
+      (lluvia !== null && lluvia >= 30) ||
+      (nivelAgua !== null && nivelAgua >= 1.5)
     ) {
       return 'PRECAUCIÓN';
     }
 
-
     return 'NORMAL';
   });
 
+  claseEstadoGeneral(): string {
 
-  /* =========================================
-     VARIABLE GRAFICA
-  ========================================= */
+    switch (this.estadoGeneral()) {
+
+      case 'CRÍTICO':
+        return 'critico';
+
+      case 'ALTO':
+        return 'alto';
+
+      case 'PRECAUCIÓN':
+        return 'precaucion';
+
+      case 'NORMAL':
+        return 'normal';
+
+      default:
+        return 'sin-datos';
+    }
+  }
+
+  
+  // actualizar las lecturas para las graficas
+  actualizarGrafica(lecturas: Lectura[]): void {
+
+    const ultimas = [...lecturas]
+      .sort((a, b) =>
+        new Date(a.fechaLectura).getTime() -
+        new Date(b.fechaLectura).getTime()
+      )
+      .slice(-100);
+
+    this.ultimasLecturas.set(ultimas);
+  }
+
+
+  // seleccionar variable de la grafica
+  cambiarVariableGrafica(valor: string): void {
+
+    const variablesPermitidas: VariableGrafica[] = [
+      'todas',
+      'temperatura',
+      'humedad',
+      'viento',
+      'lluvia',
+      'agua'
+    ];
+
+    if (variablesPermitidas.includes(valor as VariableGrafica)) {
+      this.variableGrafica.set(valor as VariableGrafica);
+      this.ocultarTooltip();
+    }
+  }
 
   nombreVariableGrafica = computed(() => {
 
-    switch (
-      this.variableGrafica()
-    ) {
+    switch (this.variableGrafica()) {
 
       case 'todas':
         return 'Todas las variables';
@@ -268,12 +599,9 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   });
 
-
   unidadVariableGrafica = computed(() => {
 
-    switch (
-      this.variableGrafica()
-    ) {
+    switch (this.variableGrafica()) {
 
       case 'temperatura':
         return '°C';
@@ -286,12 +614,9 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   });
 
-
   claseVariableGrafica = computed(() => {
 
-    switch (
-      this.variableGrafica()
-    ) {
+    switch (this.variableGrafica()) {
 
       case 'temperatura':
         return 'temperatura';
@@ -313,152 +638,107 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   });
 
+  mostrarTodas = computed(() =>
+    this.variableGrafica() === 'todas'
+  );
 
-  mostrarTodas = computed(() => {
-
-    return (
-      this.variableGrafica() === 'todas'
-    );
-  });
-
-
-  /* =========================================
-     LINEAS GRAFICA
-  ========================================= */
-
-  puntosTemperatura = computed(() => {
-
-    return this.generarPuntos(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.temperatura ?? 0
-          )
-      ),
+  // generar valores para las graficas
+  
+// generar valores para las graficas
+  puntosTemperatura = computed(() =>
+    this.generarPuntos(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.temperatura != null)
+        .map(lectura => Number(lectura.temperatura)),
       0,
       50
-    );
-  });
+    )
+  );
 
-
-  puntosHumedad = computed(() => {
-
-    return this.generarPuntos(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.humedad ?? 0
-          )
-      ),
+  puntosHumedad = computed(() =>
+    this.generarPuntos(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.humedad != null)
+        .map(lectura => Number(lectura.humedad)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  puntosViento = computed(() => {
-
-    return this.generarPuntos(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.velocidadViento ?? 0
-          )
-      ),
+  puntosViento = computed(() =>
+    this.generarPuntos(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.velocidadViento != null)
+        .map(lectura => Number(lectura.velocidadViento)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  puntosLluvia = computed(() => {
-
-    return this.generarPuntos(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.nivelLluvia ?? 0
-          )
-      ),
+  puntosLluvia = computed(() =>
+    this.generarPuntos(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.nivelLluvia != null)
+        .map(lectura => Number(lectura.nivelLluvia)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  puntosAgua = computed(() => {
-
-    return this.generarPuntos(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.nivelAgua ?? 0
-          )
-      ),
+  puntosAgua = computed(() =>
+    this.generarPuntos(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.nivelAgua != null)
+        .map(lectura => Number(lectura.nivelAgua)),
       0,
       5
-    );
-  });
+    )
+  );
 
 
-  valoresGrafica = computed(() => {
+
+valoresGrafica = computed(() => {
+  const variable = this.variableGrafica();
+
+  if (variable === 'todas') {
+    return [];
+  }
 
     return this.ultimasLecturas()
-      .map(
-        lectura => {
+      .map(lectura => {
+        switch (variable) {
+          case 'temperatura':
+            return lectura.temperatura;
 
-          switch (
-            this.variableGrafica()
-          ) {
+          case 'humedad':
+            return lectura.humedad;
 
-            case 'temperatura':
-              return Number(
-                lectura.temperatura ?? 0
-              );
+          case 'viento':
+            return lectura.velocidadViento;
 
-            case 'humedad':
-              return Number(
-                lectura.humedad ?? 0
-              );
+          case 'lluvia':
+            return lectura.nivelLluvia;
 
-            case 'viento':
-              return Number(
-                lectura.velocidadViento ?? 0
-              );
+          case 'agua':
+            return lectura.nivelAgua;
 
-            case 'lluvia':
-              return Number(
-                lectura.nivelLluvia ?? 0
-              );
-
-            case 'agua':
-              return Number(
-                lectura.nivelAgua ?? 0
-              );
-
-            default:
-              return 0;
-          }
+          default:
+            return null;
         }
-      );
+      })
+      .filter((valor): valor is number => valor != null)
+      .map(valor => Number(valor));
   });
-
 
   maximoGrafica = computed(() => {
 
-    switch (
-      this.variableGrafica()
-    ) {
+    switch (this.variableGrafica()) {
 
       case 'temperatura':
         return 50;
 
       case 'humedad':
-        return 100;
-
       case 'viento':
-        return 100;
-
       case 'lluvia':
         return 100;
 
@@ -470,878 +750,223 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   });
 
-
-  puntosGrafica = computed(() => {
-
-    return this.generarPuntos(
+  puntosGrafica = computed(() =>
+    this.generarPuntos(
       this.valoresGrafica(),
       0,
       this.maximoGrafica()
-    );
-  });
+    )
+  );
 
-
-  /* =========================================
-     COORDENADAS
-  ========================================= */
-
-  coordenadasTemperatura = computed(() => {
-
-    return this.generarCoordenadas(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.temperatura ?? 0
-          )
-      ),
+  // coordenadas para los puntos interactivos
+  
+// coordenadas para los puntos interactivos
+  coordenadasTemperatura = computed(() =>
+    this.generarCoordenadas(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.temperatura != null)
+        .map(lectura => Number(lectura.temperatura)),
       0,
       50
-    );
-  });
+    )
+  );
 
-
-  coordenadasHumedad = computed(() => {
-
-    return this.generarCoordenadas(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.humedad ?? 0
-          )
-      ),
+  coordenadasHumedad = computed(() =>
+    this.generarCoordenadas(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.humedad != null)
+        .map(lectura => Number(lectura.humedad)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  coordenadasViento = computed(() => {
-
-    return this.generarCoordenadas(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.velocidadViento ?? 0
-          )
-      ),
+  coordenadasViento = computed(() =>
+    this.generarCoordenadas(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.velocidadViento != null)
+        .map(lectura => Number(lectura.velocidadViento)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  coordenadasLluvia = computed(() => {
-
-    return this.generarCoordenadas(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.nivelLluvia ?? 0
-          )
-      ),
+  coordenadasLluvia = computed(() =>
+    this.generarCoordenadas(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.nivelLluvia != null)
+        .map(lectura => Number(lectura.nivelLluvia)),
       0,
       100
-    );
-  });
+    )
+  );
 
-
-  coordenadasAgua = computed(() => {
-
-    return this.generarCoordenadas(
-      this.ultimasLecturas().map(
-        lectura =>
-          Number(
-            lectura.nivelAgua ?? 0
-          )
-      ),
+  coordenadasAgua = computed(() =>
+    this.generarCoordenadas(
+      this.ultimasLecturas()
+        .filter(lectura => lectura.nivelAgua != null)
+        .map(lectura => Number(lectura.nivelAgua)),
       0,
       5
-    );
-  });
+    )
+  );
 
 
-  coordenadasGrafica = computed(() => {
-
-    return this.generarCoordenadas(
+  coordenadasGrafica = computed(() =>
+    this.generarCoordenadas(
       this.valoresGrafica(),
       0,
       this.maximoGrafica()
-    );
-  });
+    )
+  );
 
-
-  constructor(
-    private signalrService:
-      SignalrService,
-
-    private sensoresService:
-      SensoresService,
-
-    private lecturasService:
-      LecturasService,
-
-    private alertasService:
-      AlertasService
-  ) {}
-
-
-  ngOnInit(): void {
-
-    this.cargarEstadisticas();
-
-    this.cargarUltimasAlertas();
-
-    this.signalrService
-      .iniciarConexion();
-
-
-    this.signalrService
-      .nuevaAlerta$
-      .subscribe(
-        alerta => {
-
-          this.alertasTiempoReal
-            .update(
-              actuales => [
-                alerta,
-                ...actuales
-              ].slice(
-                0,
-                5
-              )
-            );
-
-          this.actualizarEstadisticas();
-        }
-      );
-  }
-
-
-  /* =========================================
-     CARGAR ESTADISTICAS
-  ========================================= */
-
-  cargarEstadisticas(): void {
-
-    this.sensoresService
-      .obtenerSensores()
-      .subscribe({
-
-        next: sensores => {
-
-          this.totalSensores.set(
-            sensores.length
-          );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al cargar sensores:',
-            error
-          );
-        }
-
-      });
-
-
-    this.lecturasService
-      .obtenerLecturas()
-      .subscribe({
-
-        next: lecturas => {
-
-          this.totalLecturas.set(
-            lecturas.length
-          );
-
-          this.actualizarUltimaLectura(
-            lecturas
-          );
-
-          this.actualizarGrafica(
-            lecturas
-          );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al cargar lecturas:',
-            error
-          );
-        }
-
-      });
-
-
-    this.alertasService
-      .obtenerAlertas()
-      .subscribe({
-
-        next: alertas => {
-
-          this.alertasActivas.set(
-            alertas.filter(
-              alerta =>
-                alerta.estado === 'ACTIVA'
-            ).length
-          );
-
-
-          this.alertasRojas.set(
-            alertas.filter(
-              alerta =>
-                alerta.nivel === 'ROJO'
-            ).length
-          );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al cargar alertas:',
-            error
-          );
-        }
-
-      });
-  }
-
-
-  /* =========================================
-     ULTIMA LECTURA
-  ========================================= */
-
-  actualizarUltimaLectura(
-    lecturas: Lectura[]
-  ): void {
-
-    if (
-      lecturas.length === 0
-    ) {
-
-      this.ultimaTemperatura.set(null);
-
-      this.ultimaHumedad.set(null);
-
-      this.ultimoNivelAgua.set(null);
-
-      this.ultimaVelocidadViento.set(null);
-
-      this.ultimoNivelLluvia.set(null);
-
-      this.fechaUltimaLectura.set(null);
-
-      return;
-    }
-
-
-    const ordenadas = [
-      ...lecturas
-    ].sort(
-      (a, b) =>
-
-        new Date(
-          b.fechaLectura
-        ).getTime() -
-
-        new Date(
-          a.fechaLectura
-        ).getTime()
-    );
-
-
-    const ultima =
-      ordenadas[0];
-
-
-    this.ultimaTemperatura.set(
-      ultima.temperatura !== null &&
-      ultima.temperatura !== undefined
-
-        ? Number(
-            ultima.temperatura
-          )
-
-        : null
-    );
-
-
-    this.ultimaHumedad.set(
-      ultima.humedad !== null &&
-      ultima.humedad !== undefined
-
-        ? Number(
-            ultima.humedad
-          )
-
-        : null
-    );
-
-
-    this.ultimoNivelAgua.set(
-      ultima.nivelAgua !== null &&
-      ultima.nivelAgua !== undefined
-
-        ? Number(
-            ultima.nivelAgua
-          )
-
-        : null
-    );
-
-
-    this.ultimaVelocidadViento.set(
-      ultima.velocidadViento !== null &&
-      ultima.velocidadViento !== undefined
-
-        ? Number(
-            ultima.velocidadViento
-          )
-
-        : null
-    );
-
-
-    this.ultimoNivelLluvia.set(
-      ultima.nivelLluvia !== null &&
-      ultima.nivelLluvia !== undefined
-
-        ? Number(
-            ultima.nivelLluvia
-          )
-
-        : null
-    );
-
-
-    this.fechaUltimaLectura.set(
-      ultima.fechaLectura
-    );
-  }
-
-
-  /* =========================================
-     ACTUALIZAR GRAFICA
-  ========================================= */
-
-  actualizarGrafica(
-    lecturas: Lectura[]
-  ): void {
-
-    const ultimas = [
-      ...lecturas
-    ]
-      .sort(
-        (a, b) =>
-
-          new Date(
-            a.fechaLectura
-          ).getTime() -
-
-          new Date(
-            b.fechaLectura
-          ).getTime()
-      )
-      .slice(-10);
-
-
-    this.ultimasLecturas.set(
-      ultimas
-    );
-  }
-
-
-  /* =========================================
-     CAMBIAR VARIABLE
-  ========================================= */
-
-  cambiarVariableGrafica(
-    valor: string
-  ): void {
-
-    const variablesPermitidas:
-      VariableGrafica[] = [
-        'todas',
-        'temperatura',
-        'humedad',
-        'viento',
-        'lluvia',
-        'agua'
-      ];
-
-
-    if (
-      variablesPermitidas.includes(
-        valor as VariableGrafica
-      )
-    ) {
-
-      this.variableGrafica.set(
-        valor as VariableGrafica
-      );
-
-      this.ocultarTooltip();
-    }
-  }
-
-
-  /* =========================================
-     GENERAR PUNTOS
-  ========================================= */
-
+  // generar linea SVG
   generarPuntos(
     valores: number[],
     minimo: number,
     maximo: number
   ): string {
 
-    if (
-      valores.length === 0
-    ) {
-      return '';
-    }
-
-
-    const ancho =
-      1000;
-
-    const alto =
-      260;
-
-    const margenX =
-      25;
-
-    const margenY =
-      20;
-
-
-    const anchoDisponible =
-      ancho -
-      margenX * 2;
-
-    const altoDisponible =
-      alto -
-      margenY * 2;
-
-
-    return valores
-      .map(
-        (
-          valor,
-          indice
-        ) => {
-
-          const x =
-            valores.length === 1
-
-              ? ancho / 2
-
-              : margenX +
-
-                (
-                  indice /
-                  (
-                    valores.length - 1
-                  )
-                ) *
-
-                anchoDisponible;
-
-
-          const valorLimitado =
-            Math.min(
-              maximo,
-
-              Math.max(
-                minimo,
-                valor
-              )
-            );
-
-
-          const proporcion =
-            (
-              valorLimitado -
-              minimo
-            ) /
-            (
-              maximo -
-              minimo
-            );
-
-
-          const y =
-            margenY +
-
-            altoDisponible -
-
-            proporcion *
-            altoDisponible;
-
-
-          return `${x},${y}`;
-        }
-      )
+    return this.generarCoordenadas(
+      valores,
+      minimo,
+      maximo
+    )
+      .map(punto => `${punto.x},${punto.y}`)
       .join(' ');
   }
 
-
-  /* =========================================
-     GENERAR COORDENADAS
-  ========================================= */
-
+  // generar coordenadas SVG
   generarCoordenadas(
     valores: number[],
     minimo: number,
     maximo: number
   ): PuntoGrafica[] {
 
-    if (
-      valores.length === 0
-    ) {
+    if (valores.length === 0) {
       return [];
     }
 
+    const ancho = 1000;
+    const alto = 260;
+    const margenX = 25;
+    const margenY = 20;
 
-    const ancho =
-      1000;
+    const anchoDisponible = ancho - margenX * 2;
+    const altoDisponible = alto - margenY * 2;
 
-    const alto =
-      260;
+    return valores.map((valor, indice) => {
 
-    const margenX =
-      25;
+      const x = valores.length === 1
+        ? ancho / 2
+        : margenX +
+          (indice / (valores.length - 1)) *
+          anchoDisponible;
 
-    const margenY =
-      20;
+      const valorLimitado = Math.min(
+        maximo,
+        Math.max(minimo, valor)
+      );
 
+      const proporcion =
+        (valorLimitado - minimo) / (maximo - minimo);
 
-    const anchoDisponible =
-      ancho -
-      margenX * 2;
+      const y =
+        margenY +
+        altoDisponible -
+        proporcion * altoDisponible;
 
-    const altoDisponible =
-      alto -
-      margenY * 2;
-
-
-    return valores.map(
-      (
+      return {
+        x,
+        y,
         valor,
         indice
-      ) => {
-
-        const x =
-          valores.length === 1
-
-            ? ancho / 2
-
-            : margenX +
-
-              (
-                indice /
-                (
-                  valores.length - 1
-                )
-              ) *
-
-              anchoDisponible;
-
-
-        const valorLimitado =
-          Math.min(
-            maximo,
-
-            Math.max(
-              minimo,
-              valor
-            )
-          );
-
-
-        const proporcion =
-          (
-            valorLimitado -
-            minimo
-          ) /
-          (
-            maximo -
-            minimo
-          );
-
-
-        const y =
-          margenY +
-
-          altoDisponible -
-
-          proporcion *
-          altoDisponible;
-
-
-        return {
-          x,
-          y,
-          valor,
-          indice
-        };
-      }
-    );
+      };
+    });
   }
 
-
-  /* =========================================
-     TOOLTIP
-  ========================================= */
-
+  
+  // mostrar informacion de cada punto
   mostrarTooltip(
     punto: PuntoGrafica,
     titulo: string,
     unidad: string = ''
   ): void {
 
-    const lectura =
-      this.ultimasLecturas()[
-        punto.indice
-      ];
+    const lecturas = this.ultimasLecturas();
 
+    let lecturasFiltradas = lecturas;
+
+    switch (titulo) {
+      case 'Temperatura':
+        lecturasFiltradas = lecturas.filter(
+          lectura => lectura.temperatura != null
+        );
+        break;
+
+      case 'Humedad':
+        lecturasFiltradas = lecturas.filter(
+          lectura => lectura.humedad != null
+        );
+        break;
+
+      case 'Velocidad del viento':
+        lecturasFiltradas = lecturas.filter(
+          lectura => lectura.velocidadViento != null
+        );
+        break;
+
+      case 'Nivel de lluvia':
+        lecturasFiltradas = lecturas.filter(
+          lectura => lectura.nivelLluvia != null
+        );
+        break;
+
+      case 'Nivel de agua':
+        lecturasFiltradas = lecturas.filter(
+          lectura => lectura.nivelAgua != null
+        );
+        break;
+    }
+
+    const lectura = lecturasFiltradas[punto.indice];
 
     if (!lectura) {
       return;
     }
 
+    const fecha = new Date(lectura.fechaLectura);
 
-    const fecha =
-      new Date(
-        lectura.fechaLectura
-      );
-
-
-    const hora =
-      fecha.toLocaleTimeString(
-        'es-GT',
-        {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }
-      );
-
+    const hora = fecha.toLocaleTimeString('es-GT', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
 
     this.tooltipGrafica.set({
-
       visible: true,
-
-      left:
-        `${(punto.x / 1000) * 100}%`,
-
-      top:
-        `${(punto.y / 260) * 100}%`,
-
+      left: `${(punto.x / 1000) * 100}%`,
+      top: `${(punto.y / 260) * 100}%`,
       titulo,
-
-      valor:
-        unidad
-          ? `${punto.valor} ${unidad}`
-          : `${punto.valor}`,
-
+      valor: unidad
+        ? `${punto.valor} ${unidad}`
+        : `${punto.valor}`,
       hora
     });
   }
 
-
   ocultarTooltip(): void {
 
-    this.tooltipGrafica.update(
-      tooltip => ({
-        ...tooltip,
-        visible: false
-      })
-    );
+    this.tooltipGrafica.update(tooltip => ({
+      ...tooltip,
+      visible: false
+    }));
   }
-
-
-  /* =========================================
-     ULTIMAS ALERTAS
-  ========================================= */
-
-  cargarUltimasAlertas(): void {
-
-    this.alertasService
-      .obtenerAlertas()
-      .subscribe({
-
-        next: alertas => {
-
-          const ultimas =
-
-            alertas
-              .slice(
-                0,
-                5
-              )
-              .map(
-                (
-                  alerta: Alerta
-                ): AlertaSignalR => ({
-
-                  idAlerta:
-                    alerta.idAlerta,
-
-                  idSensor:
-                    alerta.idSensor,
-
-                  idLectura:
-                    alerta.idLectura,
-
-                  tipoFenomeno:
-                    alerta.tipoFenomeno,
-
-                  nivel:
-                    alerta.nivel,
-
-                  titulo:
-                    alerta.titulo,
-
-                  mensaje:
-                    alerta.mensaje,
-
-                  estado:
-                    alerta.estado,
-
-                  fechaGeneracion:
-                    alerta.fechaGeneracion
-                })
-              );
-
-
-          this.alertasTiempoReal
-            .set(
-              ultimas
-            );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al cargar ultimas alertas:',
-            error
-          );
-        }
-
-      });
-  }
-
-
-  /* =========================================
-     ACTUALIZAR ESTADISTICAS
-  ========================================= */
-
-  actualizarEstadisticas(): void {
-
-    this.lecturasService
-      .obtenerLecturas()
-      .subscribe({
-
-        next: lecturas => {
-
-          this.totalLecturas.set(
-            lecturas.length
-          );
-
-          this.actualizarUltimaLectura(
-            lecturas
-          );
-
-          this.actualizarGrafica(
-            lecturas
-          );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al actualizar lecturas:',
-            error
-          );
-        }
-
-      });
-
-
-    this.alertasService
-      .obtenerAlertas()
-      .subscribe({
-
-        next: alertas => {
-
-          this.alertasActivas.set(
-            alertas.filter(
-              alerta =>
-                alerta.estado === 'ACTIVA'
-            ).length
-          );
-
-
-          this.alertasRojas.set(
-            alertas.filter(
-              alerta =>
-                alerta.nivel === 'ROJO'
-            ).length
-          );
-        },
-
-        error: error => {
-
-          console.error(
-            'Error al actualizar alertas:',
-            error
-          );
-        }
-
-      });
-  }
-
-
-  /* =========================================
-     CLASE ESTADO GENERAL
-  ========================================= */
-
-  claseEstadoGeneral(): string {
-
-    switch (
-      this.estadoGeneral()
-    ) {
-
-      case 'CRÍTICO':
-        return 'critico';
-
-      case 'ALTO':
-        return 'alto';
-
-      case 'PRECAUCIÓN':
-        return 'precaucion';
-
-      case 'NORMAL':
-        return 'normal';
-
-      default:
-        return 'sin-datos';
-    }
-  }
-
-
-  /* =========================================
-     DESTRUIR
-  ========================================= */
 
   ngOnDestroy(): void {
 
-    this.signalrService
-      .detenerConexion();
+    this.suscripcionAlertas?.unsubscribe();
+    this.signalrService.detenerConexion();
   }
-
 }

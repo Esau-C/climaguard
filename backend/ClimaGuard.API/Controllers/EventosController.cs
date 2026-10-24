@@ -1,6 +1,8 @@
+
 using Microsoft.AspNetCore.Authorization;
 using ClimaGuard.API.Data;
 using ClimaGuard.API.Models;
+using ClimaGuard.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +14,14 @@ namespace ClimaGuard.API.Controllers
     public class EventosController : ControllerBase
     {
         private readonly ClimaGuardDbContext _context;
+        private readonly BitacoraService _bitacoraService;
 
-        public EventosController(ClimaGuardDbContext context)
+        public EventosController(
+            ClimaGuardDbContext context,
+            BitacoraService bitacoraService)
         {
             _context = context;
+            _bitacoraService = bitacoraService;
         }
 
         [HttpGet]
@@ -40,19 +46,30 @@ namespace ClimaGuard.API.Controllers
 
             if (evento == null)
             {
-                return NotFound();
+                return NotFound("El evento no existe.");
             }
 
-            return evento;
+            return Ok(evento);
         }
 
         [HttpPost]
         public async Task<ActionResult<Evento>> CrearEvento(Evento evento)
         {
-            var alertaExiste = await _context.Alertas
-                .AnyAsync(a => a.IdAlerta == evento.IdAlerta);
+            if (string.IsNullOrWhiteSpace(evento.TipoFenomeno))
+            {
+                return BadRequest("El tipo de fenomeno es obligatorio.");
+            }
 
-            if (!alertaExiste)
+            if (string.IsNullOrWhiteSpace(evento.Nivel))
+            {
+                return BadRequest("El nivel del evento es obligatorio.");
+            }
+
+            var alerta = await _context.Alertas
+                .Include(a => a.Lectura)
+                .FirstOrDefaultAsync(a => a.IdAlerta == evento.IdAlerta);
+
+            if (alerta == null)
             {
                 return BadRequest("La alerta especificada no existe.");
             }
@@ -65,12 +82,52 @@ namespace ClimaGuard.API.Controllers
                 return BadRequest("El sensor especificado no existe.");
             }
 
+            if (alerta.Lectura == null)
+            {
+                return BadRequest("La alerta no tiene una lectura asociada.");
+            }
+
+            if (alerta.Lectura.IdSensor != evento.IdSensor)
+            {
+                return BadRequest(
+                    "El sensor no corresponde a la alerta indicada."
+                );
+            }
+
+            var eventoDuplicado = await _context.Eventos
+                .AnyAsync(e => e.IdAlerta == evento.IdAlerta);
+
+            if (eventoDuplicado)
+            {
+                return Conflict(
+                    "Ya existe un evento registrado para esta alerta."
+                );
+            }
+
+            evento.IdEvento = 0;
+            evento.TipoFenomeno = evento.TipoFenomeno.Trim();
+            evento.Nivel = evento.Nivel.Trim().ToUpperInvariant();
             evento.FechaInicio = DateTime.UtcNow;
+            evento.FechaFin = null;
             evento.Estado = "ACTIVO";
+            evento.Alerta = null;
+            evento.Sensor = null;
+
+            await using var transaccion =
+                await _context.Database.BeginTransactionAsync();
 
             _context.Eventos.Add(evento);
+            await _context.SaveChangesAsync();
+
+            _bitacoraService.Registrar(
+                "CREAR",
+                "EVENTO",
+                evento.IdEvento.ToString(),
+                $"Se creo el evento climatico {evento.IdEvento}"
+            );
 
             await _context.SaveChangesAsync();
+            await transaccion.CommitAsync();
 
             return CreatedAtAction(
                 nameof(GetEvento),
@@ -86,17 +143,30 @@ namespace ClimaGuard.API.Controllers
 
             if (evento == null)
             {
-                return NotFound();
+                return NotFound("El evento no existe.");
+            }
+
+            if (evento.Estado == "CERRADO")
+            {
+                return Conflict("El evento ya se encuentra cerrado.");
             }
 
             evento.Estado = "CERRADO";
             evento.FechaFin = DateTime.UtcNow;
+
+            _bitacoraService.Registrar(
+                "CERRAR",
+                "EVENTO",
+                evento.IdEvento.ToString(),
+                $"Se cerro el evento climatico {evento.IdEvento}"
+            );
 
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
+        [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> EliminarEvento(int id)
         {
@@ -104,10 +174,24 @@ namespace ClimaGuard.API.Controllers
 
             if (evento == null)
             {
-                return NotFound();
+                return NotFound("El evento no existe.");
+            }
+
+            if (evento.Estado == "ACTIVO")
+            {
+                return Conflict(
+                    "No se puede eliminar un evento activo. Debe cerrarlo primero."
+                );
             }
 
             _context.Eventos.Remove(evento);
+
+            _bitacoraService.Registrar(
+                "ELIMINAR",
+                "EVENTO",
+                evento.IdEvento.ToString(),
+                $"Se elimino el evento climatico {evento.IdEvento}"
+            );
 
             await _context.SaveChangesAsync();
 

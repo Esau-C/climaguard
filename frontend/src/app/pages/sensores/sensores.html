@@ -75,50 +75,150 @@
 
     <div class="formulario-grid">
 
+      <!-- nombre -->
+
       <div class="campo">
 
         <label>
-          Nombre
+          Nombre *
         </label>
 
         <input
           type="text"
           [(ngModel)]="formulario.nombre"
-          placeholder="Ej. Sensor Rio Sur"
+          placeholder="Ej. Sensor Volcán Pacaya"
         >
 
       </div>
 
+
+      <!-- codigo -->
 
       <div class="campo">
 
         <label>
-          Tipo
+          Código *
         </label>
 
         <input
           type="text"
-          [(ngModel)]="formulario.tipo"
-          placeholder="Ej. Nivel de agua"
+          [(ngModel)]="formulario.codigo"
+          placeholder="Ej. SEN-PAC-001"
         >
 
       </div>
 
 
+      <!-- tipo -->
+
+      <div class="campo">
+
+        <label>
+          Tipo *
+        </label>
+
+        <select
+          [(ngModel)]="formulario.tipo"
+        >
+
+          <option value="">
+            Seleccione un tipo
+          </option>
+
+          <option value="Temperatura">
+            Temperatura
+          </option>
+
+          <option value="Humedad">
+            Humedad
+          </option>
+
+          <option value="Viento">
+            Viento
+          </option>
+
+          <option value="Nivel de lluvia">
+            Nivel de lluvia
+          </option>
+
+          <option value="Nivel de agua">
+            Nivel de agua
+          </option>
+
+          <option value="Multivariable">
+            Multivariable
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- unidad -->
+
+      <div class="campo">
+
+        <label>
+          Unidad de medida *
+        </label>
+
+        <input
+          type="text"
+          [(ngModel)]="formulario.unidadMedida"
+          placeholder="Ej. °C, %, km/h, mm"
+        >
+
+      </div>
+
+
+      <!-- comunidad -->
+
       <div class="campo campo-completo">
 
         <label>
-          Ubicación
+          Comunidad *
+        </label>
+
+        <select
+          [(ngModel)]="formulario.idComunidad"
+        >
+
+          <option [ngValue]="0">
+            Seleccione una comunidad
+          </option>
+
+          <option
+            *ngFor="let comunidad of comunidades()"
+            [ngValue]="comunidad.idComunidad"
+          >
+            {{ comunidad.nombre }}
+            - {{ comunidad.municipio }},
+            {{ comunidad.departamento }}
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- ubicacion -->
+
+      <div class="campo campo-completo">
+
+        <label>
+          Ubicación específica *
         </label>
 
         <input
           type="text"
           [(ngModel)]="formulario.ubicacion"
-          placeholder="Ej. Rio Sur"
+          placeholder="Ej. Estación de monitoreo sector norte"
         >
 
       </div>
 
+
+      <!-- latitud -->
 
       <div class="campo">
 
@@ -136,6 +236,8 @@
       </div>
 
 
+      <!-- longitud -->
+
       <div class="campo">
 
         <label>
@@ -148,6 +250,39 @@
           [(ngModel)]="formulario.longitud"
           placeholder="-90.51"
         >
+
+      </div>
+
+
+      <!-- fecha instalacion -->
+
+      <div class="campo campo-completo">
+
+        <label>
+          Fecha de instalación
+        </label>
+
+        <input
+          type="date"
+          [(ngModel)]="formulario.fechaInstalacion"
+        >
+
+      </div>
+
+
+      <!-- descripcion -->
+
+      <div class="campo campo-completo">
+
+        <label>
+          Descripción
+        </label>
+
+        <textarea
+          [(ngModel)]="formulario.descripcion"
+          rows="3"
+          placeholder="Descripción del sensor o información adicional..."
+        ></textarea>
 
       </div>
 
@@ -232,7 +367,7 @@
   </div>
 
 
-  <!-- lista de sensores -->
+  <!-- lista -->
 
   <div
     *ngIf="
@@ -279,7 +414,46 @@
       </div>
 
 
+      <div class="codigo-sensor">
+
+        Código:
+        <strong>
+          {{ sensor.codigo || 'Sin código' }}
+        </strong>
+
+      </div>
+
+
       <div class="datos">
+
+        <div>
+
+          <span>
+            Comunidad
+          </span>
+
+          <strong>
+            {{
+              sensor.comunidad?.nombre
+                || 'Sin comunidad'
+            }}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            ID del sensor
+          </span>
+
+          <strong>
+            #{{ sensor.idSensor }}
+          </strong>
+
+        </div>
+
 
         <div>
 
@@ -297,11 +471,11 @@
         <div>
 
           <span>
-            ID del sensor
+            Unidad
           </span>
 
           <strong>
-            #{{ sensor.idSensor }}
+            {{ sensor.unidadMedida || 'N/D' }}
           </strong>
 
         </div>
@@ -332,6 +506,14 @@
 
         </div>
 
+      </div>
+
+
+      <div
+        *ngIf="sensor.descripcion"
+        class="descripcion-sensor"
+      >
+        {{ sensor.descripcion }}
       </div>
 
 

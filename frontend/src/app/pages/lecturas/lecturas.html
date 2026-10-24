@@ -5,19 +5,14 @@
   <div class="titulo">
 
     <div>
-
-      <h1>
-        Lecturas
-      </h1>
+      <h1>Lecturas</h1>
 
       <p>
         Mediciones registradas por los sensores
       </p>
-
     </div>
 
     <span class="contador">
-
       {{ lecturasFiltradas().length }}
 
       {{
@@ -25,7 +20,6 @@
           ? 'lectura'
           : 'lecturas'
       }}
-
     </span>
 
   </div>
@@ -34,6 +28,8 @@
   <!-- filtros -->
 
   <section class="filtros">
+
+    <!-- sensor -->
 
     <div class="campo-filtro">
 
@@ -51,9 +47,7 @@
         </option>
 
         <option
-          *ngFor="
-            let sensor of sensoresDisponibles()
-          "
+          *ngFor="let sensor of sensoresDisponibles()"
           [value]="sensor.idSensor"
         >
           {{ sensor.nombre }}
@@ -63,6 +57,37 @@
 
     </div>
 
+
+    <!-- comunidad -->
+
+    <div class="campo-filtro">
+
+      <label>
+        Comunidad
+      </label>
+
+      <select
+        [ngModel]="filtroComunidad()"
+        (ngModelChange)="cambiarComunidad($event)"
+      >
+
+        <option value="">
+          Todas
+        </option>
+
+        <option
+          *ngFor="let comunidad of comunidadesDisponibles()"
+          [value]="comunidad.idComunidad"
+        >
+          {{ comunidad.nombre }}
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <!-- fecha -->
 
     <div class="campo-filtro">
 
@@ -79,6 +104,8 @@
     </div>
 
 
+    <!-- busqueda -->
+
     <div class="campo-filtro campo-busqueda">
 
       <label>
@@ -89,7 +116,7 @@
         type="text"
         [ngModel]="busqueda()"
         (ngModelChange)="cambiarBusqueda($event)"
-        placeholder="Sensor, ubicación o ID"
+        placeholder="Sensor, comunidad, ubicación o ID"
       >
 
     </div>
@@ -215,6 +242,10 @@
           </th>
 
           <th>
+            Comunidad
+          </th>
+
+          <th>
             Temperatura
           </th>
 
@@ -246,17 +277,13 @@
       <tbody>
 
         <tr
-          *ngFor="
-            let lectura of lecturasPaginadas()
-          "
+          *ngFor="let lectura of lecturasPaginadas()"
         >
 
           <!-- id -->
 
           <td>
-
             #{{ lectura.idLectura }}
-
           </td>
 
 
@@ -265,21 +292,42 @@
           <td>
 
             <strong>
-
               {{
                 lectura.sensor?.nombre ||
                 'Sensor #' + lectura.idSensor
               }}
-
             </strong>
 
             <small>
-
               {{
                 lectura.sensor?.ubicacion ||
                 'Sin ubicación'
               }}
+            </small>
 
+          </td>
+
+
+          <!-- comunidad -->
+
+          <td>
+
+            <strong>
+              {{
+                lectura.sensor?.comunidad?.nombre ||
+                'Sin comunidad'
+              }}
+            </strong>
+
+            <small
+              *ngIf="lectura.sensor?.comunidad"
+            >
+              {{
+                lectura.sensor?.comunidad?.municipio
+              }},
+              {{
+                lectura.sensor?.comunidad?.departamento
+              }}
             </small>
 
           </td>
@@ -297,14 +345,12 @@
                 )
               "
             >
-
               {{
                 lectura.temperatura !== null &&
                 lectura.temperatura !== undefined
                   ? lectura.temperatura + ' °C'
                   : 'N/D'
               }}
-
             </span>
 
           </td>
@@ -322,14 +368,12 @@
                 )
               "
             >
-
               {{
                 lectura.humedad !== null &&
                 lectura.humedad !== undefined
                   ? lectura.humedad + ' %'
                   : 'N/D'
               }}
-
             </span>
 
           </td>
@@ -347,14 +391,12 @@
                 )
               "
             >
-
               {{
                 lectura.velocidadViento !== null &&
                 lectura.velocidadViento !== undefined
                   ? lectura.velocidadViento
                   : 'N/D'
               }}
-
             </span>
 
           </td>
@@ -372,14 +414,12 @@
                 )
               "
             >
-
               {{
                 lectura.nivelLluvia !== null &&
                 lectura.nivelLluvia !== undefined
                   ? lectura.nivelLluvia
                   : 'N/D'
               }}
-
             </span>
 
           </td>
@@ -397,14 +437,12 @@
                 )
               "
             >
-
               {{
                 lectura.nivelAgua !== null &&
                 lectura.nivelAgua !== undefined
                   ? lectura.nivelAgua
                   : 'N/D'
               }}
-
             </span>
 
           </td>
@@ -413,12 +451,10 @@
           <!-- fecha -->
 
           <td>
-
             {{
               lectura.fechaLectura
                 | date:'dd/MM/yyyy HH:mm:ss'
             }}
-
           </td>
 
         </tr>
@@ -467,10 +503,13 @@
       <div class="paginacion-centro">
 
         Página
+
         <strong>
           {{ paginaActual() }}
         </strong>
+
         de
+
         <strong>
           {{ totalPaginas() }}
         </strong>

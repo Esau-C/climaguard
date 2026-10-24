@@ -2,6 +2,47 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface ComunidadAlerta {
+  idComunidad: number;
+  nombre: string;
+  municipio: string;
+  departamento: string;
+  pais: string;
+  latitud: number | null;
+  longitud: number | null;
+  descripcion: string | null;
+  activa: boolean;
+  fechaRegistro: string;
+}
+
+export interface SensorAlerta {
+  idSensor: number;
+  nombre: string;
+  codigo: string;
+  tipo: string;
+  idComunidad: number;
+  ubicacion: string;
+  unidadMedida: string;
+  latitud: number;
+  longitud: number;
+  activo: boolean;
+  fechaInstalacion: string | null;
+  descripcion: string | null;
+  fechaRegistro: string;
+  comunidad: ComunidadAlerta | null;
+}
+
+export interface LecturaAlerta {
+  idLectura: number;
+  idSensor: number;
+  temperatura: number | null;
+  humedad: number | null;
+  velocidadViento: number | null;
+  nivelLluvia: number | null;
+  nivelAgua: number | null;
+  fechaLectura: string;
+}
+
 export interface Alerta {
   idAlerta: number;
   idSensor: number;
@@ -15,27 +56,8 @@ export interface Alerta {
   fechaGeneracion: string;
   estado: string;
 
-  sensor?: {
-    idSensor: number;
-    nombre: string;
-    tipo: string;
-    ubicacion: string;
-    latitud: number;
-    longitud: number;
-    activo: boolean;
-    fechaRegistro: string;
-  };
-
-  lectura?: {
-    idLectura: number;
-    idSensor: number;
-    temperatura: number;
-    humedad: number;
-    velocidadViento: number;
-    nivelLluvia: number;
-    nivelAgua: number;
-    fechaLectura: string;
-  };
+  sensor?: SensorAlerta | null;
+  lectura?: LecturaAlerta | null;
 }
 
 export interface RespuestaEstadoAlerta {
@@ -63,7 +85,9 @@ export class AlertasService {
     );
   }
 
-  obtenerAlerta(id: number): Observable<Alerta> {
+  obtenerAlerta(
+    id: number
+  ): Observable<Alerta> {
 
     return this.http.get<Alerta>(
       `${this.apiUrl}/${id}`
@@ -80,7 +104,7 @@ export class AlertasService {
       null,
       {
         params: {
-          estado: estado
+          estado
         }
       }
     );

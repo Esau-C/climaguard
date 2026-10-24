@@ -1,7 +1,9 @@
+
 using ClimaGuard.API.Data;
 using ClimaGuard.API.Hubs;
 using ClimaGuard.API.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClimaGuard.API.Services
 {
@@ -18,302 +20,176 @@ namespace ClimaGuard.API.Services
             _hubContext = hubContext;
         }
 
-        public async Task<List<Alerta>> AnalizarLectura(
-            Lectura lectura)
+        public async Task<List<Alerta>> AnalizarLectura(Lectura lectura)
         {
-            var alertas =
-                new List<Alerta>();
+            var alertas = new List<Alerta>();
 
+            // consultar las reglas activas desde la base de datos
+            var reglas = await _context.ReglasAlerta
+                .AsNoTracking()
+                .Where(r => r.Activa)
+                .ToListAsync();
 
-            // =====================================================
-            // INUNDACION
-            // =====================================================
+            // evaluar todas las reglas y agrupar por fenomeno
+            var reglasCumplidas = reglas
+                .Where(r => CumpleRegla(r, lectura))
+                .GroupBy(r => r.TipoFenomeno.Trim().ToUpperInvariant());
 
-            if (
-                lectura.NivelAgua >= 3.0m
-            )
+            foreach (var grupo in reglasCumplidas)
             {
-                alertas.Add(
-                    CrearAlerta(
-                        lectura,
-                        "Inundacion",
-                        "ROJO",
-                        "Riesgo alto de inundacion",
-                        "El nivel de agua ha alcanzado un nivel critico."
-                    )
-                );
-            }
-            else if (
-                lectura.NivelAgua >= 2.0m
-            )
-            {
-                alertas.Add(
-                    CrearAlerta(
-                        lectura,
-                        "Inundacion",
-                        "NARANJA",
-                        "Riesgo de inundacion",
-                        "El nivel de agua se encuentra elevado."
-                    )
-                );
-            }
-            else if (
-                lectura.NivelAgua >= 1.5m
-            )
-            {
-                alertas.Add(
-                    CrearAlerta(
-                        lectura,
-                        "Inundacion",
-                        "AMARILLO",
-                        "Nivel de agua en aumento",
-                        "Se recomienda monitorear el nivel de agua."
-                    )
-                );
+                // seleccionar solo la regla de mayor prioridad
+                var reglaMayor = grupo
+                    .OrderByDescending(r => PrioridadNivel(r.Nivel))
+                    .ThenBy(r => r.IdReglaAlerta)
+                    .First();
+
+                alertas.Add(CrearAlerta(
+                    lectura,
+                    NombreFenomeno(reglaMayor.TipoFenomeno),
+                    reglaMayor.Nivel.Trim().ToUpperInvariant(),
+                    reglaMayor.Titulo,
+                    reglaMayor.Mensaje
+                ));
             }
 
-
-            // =====================================================
-            // TORMENTA
-            // =====================================================
-
-            var mensajesTormenta =
-                new List<string>();
-
-            string? nivelTormenta =
-                null;
-
-
-            // nivel de lluvia
-            if (
-                lectura.NivelLluvia >= 80.0m
-            )
+            // guardar las alertas generadas
+            if (alertas.Count > 0)
             {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "ROJO"
-                    );
+                _context.Alertas.AddRange(alertas);
+                await _context.SaveChangesAsync();
 
-                mensajesTormenta.Add(
-                    "Se detecto una cantidad critica de lluvia."
-                );
-            }
-            else if (
-                lectura.NivelLluvia >= 50.0m
-            )
-            {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "NARANJA"
-                    );
-
-                mensajesTormenta.Add(
-                    "Se detecto un nivel elevado de lluvia."
-                );
-            }
-            else if (
-                lectura.NivelLluvia >= 30.0m
-            )
-            {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "AMARILLO"
-                    );
-
-                mensajesTormenta.Add(
-                    "Se recomienda monitorear las condiciones de lluvia."
-                );
-            }
-
-
-            // velocidad del viento
-            if (
-                lectura.VelocidadViento >= 80.0m
-            )
-            {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "ROJO"
-                    );
-
-                mensajesTormenta.Add(
-                    "Se detectaron velocidades de viento criticas."
-                );
-            }
-            else if (
-                lectura.VelocidadViento >= 60.0m
-            )
-            {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "NARANJA"
-                    );
-
-                mensajesTormenta.Add(
-                    "Se detectaron velocidades de viento elevadas."
-                );
-            }
-            else if (
-                lectura.VelocidadViento >= 40.0m
-            )
-            {
-                nivelTormenta =
-                    NivelMayor(
-                        nivelTormenta,
-                        "AMARILLO"
-                    );
-
-                mensajesTormenta.Add(
-                    "Se recomienda monitorear la velocidad del viento."
-                );
-            }
-
-
-            if (
-                nivelTormenta != null
-            )
-            {
-                alertas.Add(
-                    CrearAlerta(
-                        lectura,
-                        "Tormenta",
-                        nivelTormenta,
-                        ObtenerTituloTormenta(
-                            nivelTormenta
-                        ),
-                        string.Join(
-                            " ",
-                            mensajesTormenta
-                        )
-                    )
-                );
-            }
-
-
-            // =====================================================
-            // INCENDIO FORESTAL
-            // ahora usa temperatura + humedad
-            // =====================================================
-
-            var temperatura =
-                lectura.Temperatura;
-
-            var humedad =
-                lectura.Humedad;
-
-
-            if (
-                temperatura.HasValue &&
-                humedad.HasValue
-            )
-            {
-                // rojo
-                if (
-                    temperatura.Value >= 45.0m &&
-                    humedad.Value <= 30.0m
-                )
+                // notificar al frontend mediante signalr
+                foreach (var alerta in alertas)
                 {
-                    alertas.Add(
-                        CrearAlerta(
-                            lectura,
-                            "Incendio forestal",
-                            "ROJO",
-                            "Riesgo critico de incendio forestal",
-                            "Se detecto temperatura extremadamente alta y humedad muy baja."
-                        )
-                    );
-                }
-
-                // naranja
-                else if (
-                    temperatura.Value >= 40.0m &&
-                    humedad.Value <= 45.0m
-                )
-                {
-                    alertas.Add(
-                        CrearAlerta(
-                            lectura,
-                            "Incendio forestal",
-                            "NARANJA",
-                            "Riesgo elevado de incendio forestal",
-                            "Se detecto temperatura alta y humedad baja."
-                        )
-                    );
-                }
-
-                // amarillo
-                else if (
-                    temperatura.Value >= 35.0m &&
-                    humedad.Value <= 60.0m
-                )
-                {
-                    alertas.Add(
-                        CrearAlerta(
-                            lectura,
-                            "Incendio forestal",
-                            "AMARILLO",
-                            "Condiciones favorables para incendio",
-                            "La temperatura se encuentra elevada y la humedad ha disminuido."
-                        )
+                    await _hubContext.Clients.All.SendAsync(
+                        "NuevaAlerta",
+                        new
+                        {
+                            alerta.IdAlerta,
+                            alerta.IdSensor,
+                            alerta.IdLectura,
+                            alerta.TipoFenomeno,
+                            alerta.Nivel,
+                            alerta.Titulo,
+                            alerta.Mensaje,
+                            alerta.Estado,
+                            alerta.FechaGeneracion
+                        }
                     );
                 }
             }
-
-
-            // =====================================================
-            // GUARDAR Y EMITIR ALERTAS
-            // =====================================================
-
-            if (
-                alertas.Count > 0
-            )
-            {
-                _context.Alertas.AddRange(
-                    alertas
-                );
-
-                await _context
-                    .SaveChangesAsync();
-
-
-                foreach (
-                    var alerta in alertas
-                )
-                {
-                    await _hubContext
-                        .Clients
-                        .All
-                        .SendAsync(
-                            "NuevaAlerta",
-                            new
-                            {
-                                alerta.IdAlerta,
-                                alerta.IdSensor,
-                                alerta.IdLectura,
-                                alerta.TipoFenomeno,
-                                alerta.Nivel,
-                                alerta.Titulo,
-                                alerta.Mensaje,
-                                alerta.Estado,
-                                alerta.FechaGeneracion
-                            }
-                        );
-                }
-            }
-
 
             return alertas;
         }
 
+        private bool CumpleRegla(ReglaAlerta regla, Lectura lectura)
+        {
+            var valorPrincipal = ObtenerValor(
+                lectura,
+                regla.Variable
+            );
 
-        // =====================================================
-        // CREAR ALERTA
-        // =====================================================
+            if (!valorPrincipal.HasValue)
+            {
+                return false;
+            }
+
+            var cumplePrincipal = Comparar(
+                valorPrincipal.Value,
+                regla.Operador,
+                regla.Umbral
+            );
+
+            if (!cumplePrincipal)
+            {
+                return false;
+            }
+
+            // si no existe condicion secundaria, basta la principal
+            if (string.IsNullOrWhiteSpace(regla.VariableSecundaria))
+            {
+                return true;
+            }
+
+            // una condicion secundaria incompleta no debe activarse
+            if (string.IsNullOrWhiteSpace(regla.OperadorSecundario) ||
+                !regla.UmbralSecundario.HasValue)
+            {
+                return false;
+            }
+
+            var valorSecundario = ObtenerValor(
+                lectura,
+                regla.VariableSecundaria
+            );
+
+            if (!valorSecundario.HasValue)
+            {
+                return false;
+            }
+
+            // ambas condiciones deben cumplirse
+            return Comparar(
+                valorSecundario.Value,
+                regla.OperadorSecundario,
+                regla.UmbralSecundario.Value
+            );
+        }
+
+        private decimal? ObtenerValor(
+            Lectura lectura,
+            string variable)
+        {
+            return variable.Trim().ToLowerInvariant() switch
+            {
+                "temperatura" => lectura.Temperatura,
+                "humedad" => lectura.Humedad,
+                "velocidadviento" => lectura.VelocidadViento,
+                "nivellluvia" => lectura.NivelLluvia,
+                "nivelagua" => lectura.NivelAgua,
+                _ => null
+            };
+        }
+
+        private bool Comparar(
+            decimal valor,
+            string operador,
+            decimal umbral)
+        {
+            return operador.Trim() switch
+            {
+                ">" => valor > umbral,
+                ">=" => valor >= umbral,
+                "<" => valor < umbral,
+                "<=" => valor <= umbral,
+                "==" => valor == umbral,
+                "=" => valor == umbral,
+                "!=" => valor != umbral,
+                _ => false
+            };
+        }
+
+        private int PrioridadNivel(string nivel)
+        {
+            return nivel.Trim().ToUpperInvariant() switch
+            {
+                "ROJO" => 3,
+                "NARANJA" => 2,
+                "AMARILLO" => 1,
+                _ => 0
+            };
+        }
+
+        private string NombreFenomeno(string tipoFenomeno)
+        {
+            return tipoFenomeno.Trim().ToUpperInvariant() switch
+            {
+                "INUNDACION" => "Inundacion",
+                "TORMENTA" => "Tormenta",
+                "INCENDIO" => "Incendio forestal",
+                _ => tipoFenomeno.Trim()
+            };
+        }
 
         private Alerta CrearAlerta(
             Lectura lectura,
@@ -324,97 +200,14 @@ namespace ClimaGuard.API.Services
         {
             return new Alerta
             {
-                IdSensor =
-                    lectura.IdSensor,
-
-                IdLectura =
-                    lectura.IdLectura,
-
-                TipoFenomeno =
-                    tipoFenomeno,
-
-                Nivel =
-                    nivel,
-
-                Titulo =
-                    titulo,
-
-                Mensaje =
-                    mensaje,
-
-                FechaGeneracion =
-                    DateTime.UtcNow,
-
-                Estado =
-                    "ACTIVA"
-            };
-        }
-
-
-        // =====================================================
-        // NIVEL MAYOR
-        // =====================================================
-
-        private string NivelMayor(
-            string? nivelActual,
-            string nuevoNivel)
-        {
-            if (
-                nivelActual == null
-            )
-            {
-                return nuevoNivel;
-            }
-
-
-            var prioridad =
-                new Dictionary<string, int>
-                {
-                    {
-                        "AMARILLO",
-                        1
-                    },
-                    {
-                        "NARANJA",
-                        2
-                    },
-                    {
-                        "ROJO",
-                        3
-                    }
-                };
-
-
-            return
-                prioridad[nuevoNivel] >
-                prioridad[nivelActual]
-
-                    ? nuevoNivel
-
-                    : nivelActual;
-        }
-
-
-        // =====================================================
-        // TITULO TORMENTA
-        // =====================================================
-
-        private string ObtenerTituloTormenta(
-            string nivel)
-        {
-            return nivel switch
-            {
-                "ROJO" =>
-                    "Tormenta severa",
-
-                "NARANJA" =>
-                    "Condiciones de tormenta",
-
-                "AMARILLO" =>
-                    "Condiciones meteorologicas en aumento",
-
-                _ =>
-                    "Tormenta"
+                IdSensor = lectura.IdSensor,
+                IdLectura = lectura.IdLectura,
+                TipoFenomeno = tipoFenomeno,
+                Nivel = nivel,
+                Titulo = titulo,
+                Mensaje = mensaje,
+                FechaGeneracion = DateTime.UtcNow,
+                Estado = "ACTIVA"
             };
         }
     }

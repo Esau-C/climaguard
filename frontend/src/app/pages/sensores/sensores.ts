@@ -24,6 +24,11 @@ import {
 } from '../../services/sensores.service';
 
 import {
+  Comunidad,
+  ComunidadesService
+} from '../../services/comunidades.service';
+
+import {
   AuthService
 } from '../../services/auth.service';
 
@@ -41,6 +46,8 @@ import {
 export class Sensores implements OnInit {
 
   sensores = signal<Sensor[]>([]);
+  comunidades = signal<Comunidad[]>([]);
+
   cargando = signal(true);
   error = signal('');
 
@@ -53,22 +60,31 @@ export class Sensores implements OnInit {
 
   formulario = {
     nombre: '',
+    codigo: '',
     tipo: '',
+    idComunidad: 0,
     ubicacion: '',
+    unidadMedida: '',
     latitud: 0,
-    longitud: 0
+    longitud: 0,
+    fechaInstalacion: '',
+    descripcion: ''
   };
 
   constructor(
     private sensoresService: SensoresService,
+    private comunidadesService: ComunidadesService,
     private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+
     this.cargarSensores();
+    this.cargarComunidades();
   }
 
   esAdmin(): boolean {
+
     return this.authService.esAdmin();
   }
 
@@ -85,7 +101,6 @@ export class Sensores implements OnInit {
 
           this.sensores.set(sensores);
           this.cargando.set(false);
-
         },
 
         error: error => {
@@ -105,6 +120,32 @@ export class Sensores implements OnInit {
       });
   }
 
+  cargarComunidades(): void {
+
+    this.comunidadesService
+      .obtenerComunidades()
+      .subscribe({
+
+        next: comunidades => {
+
+          this.comunidades.set(
+            comunidades.filter(
+              comunidad => comunidad.activa
+            )
+          );
+        },
+
+        error: error => {
+
+          console.error(
+            'Error al cargar comunidades:',
+            error
+          );
+        }
+
+      });
+  }
+
   abrirNuevoSensor(): void {
 
     this.modoEdicion.set(false);
@@ -112,10 +153,15 @@ export class Sensores implements OnInit {
 
     this.formulario = {
       nombre: '',
+      codigo: '',
       tipo: '',
+      idComunidad: 0,
       ubicacion: '',
+      unidadMedida: '',
       latitud: 0,
-      longitud: 0
+      longitud: 0,
+      fechaInstalacion: '',
+      descripcion: ''
     };
 
     this.mostrandoFormulario.set(true);
@@ -130,11 +176,38 @@ export class Sensores implements OnInit {
     );
 
     this.formulario = {
-      nombre: sensor.nombre,
-      tipo: sensor.tipo,
-      ubicacion: sensor.ubicacion,
-      latitud: sensor.latitud,
-      longitud: sensor.longitud
+
+      nombre:
+        sensor.nombre,
+
+      codigo:
+        sensor.codigo ?? '',
+
+      tipo:
+        sensor.tipo,
+
+      idComunidad:
+        sensor.idComunidad ?? 0,
+
+      ubicacion:
+        sensor.ubicacion,
+
+      unidadMedida:
+        sensor.unidadMedida ?? '',
+
+      latitud:
+        sensor.latitud,
+
+      longitud:
+        sensor.longitud,
+
+      fechaInstalacion:
+        sensor.fechaInstalacion
+          ? sensor.fechaInstalacion.substring(0, 10)
+          : '',
+
+      descripcion:
+        sensor.descripcion ?? ''
     };
 
     this.mostrandoFormulario.set(true);
@@ -145,7 +218,6 @@ export class Sensores implements OnInit {
     this.mostrandoFormulario.set(false);
     this.modoEdicion.set(false);
     this.sensorEditandoId.set(null);
-
   }
 
   validarFormulario(): boolean {
@@ -154,6 +226,15 @@ export class Sensores implements OnInit {
 
       alert(
         'El nombre del sensor es obligatorio.'
+      );
+
+      return false;
+    }
+
+    if (!this.formulario.codigo.trim()) {
+
+      alert(
+        'El código del sensor es obligatorio.'
       );
 
       return false;
@@ -168,10 +249,31 @@ export class Sensores implements OnInit {
       return false;
     }
 
+    if (
+      !this.formulario.idComunidad ||
+      Number(this.formulario.idComunidad) <= 0
+    ) {
+
+      alert(
+        'Debe seleccionar una comunidad.'
+      );
+
+      return false;
+    }
+
     if (!this.formulario.ubicacion.trim()) {
 
       alert(
         'La ubicación del sensor es obligatoria.'
+      );
+
+      return false;
+    }
+
+    if (!this.formulario.unidadMedida.trim()) {
+
+      alert(
+        'La unidad de medida es obligatoria.'
       );
 
       return false;
@@ -240,11 +342,9 @@ export class Sensores implements OnInit {
 
       this.actualizarSensor();
 
-    }
-    else {
+    } else {
 
       this.crearSensor();
-
     }
   }
 
@@ -255,35 +355,49 @@ export class Sensores implements OnInit {
       nombre:
         this.formulario.nombre.trim(),
 
+      codigo:
+        this.formulario.codigo.trim(),
+
       tipo:
         this.formulario.tipo.trim(),
 
+      idComunidad:
+        Number(this.formulario.idComunidad),
+
       ubicacion:
         this.formulario.ubicacion.trim(),
+
+      unidadMedida:
+        this.formulario.unidadMedida.trim(),
 
       latitud:
         Number(this.formulario.latitud),
 
       longitud:
-        Number(this.formulario.longitud)
+        Number(this.formulario.longitud),
+
+      fechaInstalacion:
+        this.formulario.fechaInstalacion
+          ? this.formulario.fechaInstalacion
+          : null,
+
+      descripcion:
+        this.formulario.descripcion.trim()
+          ? this.formulario.descripcion.trim()
+          : null
     };
 
     this.sensoresService
       .crearSensor(nuevoSensor)
       .subscribe({
 
-        next: sensor => {
-
-          this.sensores.update(
-            actuales => [
-              sensor,
-              ...actuales
-            ]
-          );
+        next: () => {
 
           this.guardando.set(false);
 
           this.cerrarFormulario();
+
+          this.cargarSensores();
         },
 
         error: error => {
@@ -296,7 +410,10 @@ export class Sensores implements OnInit {
           this.guardando.set(false);
 
           alert(
-            'No fue posible crear el sensor.'
+            this.obtenerMensajeError(
+              error,
+              'No fue posible crear el sensor.'
+            )
           );
         }
 
@@ -315,33 +432,25 @@ export class Sensores implements OnInit {
       return;
     }
 
-    const sensorActual =
-      this.sensores()
-        .find(
-          sensor =>
-            sensor.idSensor === id
-        );
-
-    if (!sensorActual) {
-
-      this.guardando.set(false);
-
-      return;
-    }
-
     const sensor: SensorActualizar = {
-
-      idSensor:
-        sensorActual.idSensor,
 
       nombre:
         this.formulario.nombre.trim(),
 
+      codigo:
+        this.formulario.codigo.trim(),
+
       tipo:
         this.formulario.tipo.trim(),
 
+      idComunidad:
+        Number(this.formulario.idComunidad),
+
       ubicacion:
         this.formulario.ubicacion.trim(),
+
+      unidadMedida:
+        this.formulario.unidadMedida.trim(),
 
       latitud:
         Number(this.formulario.latitud),
@@ -349,11 +458,15 @@ export class Sensores implements OnInit {
       longitud:
         Number(this.formulario.longitud),
 
-      activo:
-        sensorActual.activo,
+      fechaInstalacion:
+        this.formulario.fechaInstalacion
+          ? this.formulario.fechaInstalacion
+          : null,
 
-      fechaRegistro:
-        sensorActual.fechaRegistro
+      descripcion:
+        this.formulario.descripcion.trim()
+          ? this.formulario.descripcion.trim()
+          : null
     };
 
     this.sensoresService
@@ -365,41 +478,11 @@ export class Sensores implements OnInit {
 
         next: () => {
 
-          this.sensores.update(
-            actuales =>
-              actuales.map(item => {
-
-                if (
-                  item.idSensor === id
-                ) {
-
-                  return {
-                    ...item,
-                    nombre:
-                      sensor.nombre,
-
-                    tipo:
-                      sensor.tipo,
-
-                    ubicacion:
-                      sensor.ubicacion,
-
-                    latitud:
-                      sensor.latitud,
-
-                    longitud:
-                      sensor.longitud
-                  };
-                }
-
-                return item;
-
-              })
-          );
-
           this.guardando.set(false);
 
           this.cerrarFormulario();
+
+          this.cargarSensores();
         },
 
         error: error => {
@@ -412,7 +495,10 @@ export class Sensores implements OnInit {
           this.guardando.set(false);
 
           alert(
-            'No fue posible actualizar el sensor.'
+            this.obtenerMensajeError(
+              error,
+              'No fue posible actualizar el sensor.'
+            )
           );
         }
 
@@ -450,7 +536,6 @@ export class Sensores implements OnInit {
                 }
 
                 return item;
-
               })
           );
         },
@@ -463,10 +548,42 @@ export class Sensores implements OnInit {
           );
 
           alert(
-            'No fue posible cambiar el estado del sensor.'
+            this.obtenerMensajeError(
+              error,
+              'No fue posible cambiar el estado del sensor.'
+            )
           );
         }
 
       });
+  }
+
+  private obtenerMensajeError(
+    error: any,
+    mensajePredeterminado: string
+  ): string {
+
+    if (
+      typeof error?.error === 'string'
+    ) {
+
+      return error.error;
+    }
+
+    if (
+      error?.error?.mensaje
+    ) {
+
+      return error.error.mensaje;
+    }
+
+    if (
+      error?.error?.title
+    ) {
+
+      return error.error.title;
+    }
+
+    return mensajePredeterminado;
   }
 }

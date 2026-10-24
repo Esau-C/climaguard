@@ -36,10 +36,12 @@ import {
 export class Lecturas implements OnInit {
 
   lecturas = signal<Lectura[]>([]);
+
   cargando = signal(true);
   error = signal('');
 
   filtroSensor = signal('');
+  filtroComunidad = signal('');
   filtroFecha = signal('');
   busqueda = signal('');
 
@@ -50,6 +52,11 @@ export class Lecturas implements OnInit {
 
     const sensor =
       this.filtroSensor()
+        .trim()
+        .toLowerCase();
+
+    const comunidad =
+      this.filtroComunidad()
         .trim()
         .toLowerCase();
 
@@ -72,6 +79,22 @@ export class Lecturas implements OnInit {
           lectura.sensor?.ubicacion
             ?.toLowerCase() || '';
 
+        const codigoSensor =
+          lectura.sensor?.codigo
+            ?.toLowerCase() || '';
+
+        const nombreComunidad =
+          lectura.sensor?.comunidad?.nombre
+            ?.toLowerCase() || '';
+
+        const municipio =
+          lectura.sensor?.comunidad?.municipio
+            ?.toLowerCase() || '';
+
+        const departamento =
+          lectura.sensor?.comunidad?.departamento
+            ?.toLowerCase() || '';
+
         const idLectura =
           lectura.idLectura
             .toString();
@@ -80,10 +103,17 @@ export class Lecturas implements OnInit {
           lectura.idSensor
             .toString();
 
+        const idComunidad =
+          lectura.sensor?.idComunidad
+            ?.toString() || '';
+
         const cumpleSensor =
           !sensor ||
-          nombreSensor.includes(sensor) ||
           idSensor === sensor;
+
+        const cumpleComunidad =
+          !comunidad ||
+          idComunidad === comunidad;
 
         let cumpleFecha = true;
 
@@ -114,12 +144,17 @@ export class Lecturas implements OnInit {
         const cumpleBusqueda =
           !texto ||
           nombreSensor.includes(texto) ||
+          codigoSensor.includes(texto) ||
           ubicacion.includes(texto) ||
+          nombreComunidad.includes(texto) ||
+          municipio.includes(texto) ||
+          departamento.includes(texto) ||
           idLectura.includes(texto) ||
           idSensor.includes(texto);
 
         return (
           cumpleSensor &&
+          cumpleComunidad &&
           cumpleFecha &&
           cumpleBusqueda
         );
@@ -192,6 +227,40 @@ export class Lecturas implements OnInit {
     );
   });
 
+  comunidadesDisponibles = computed(() => {
+
+    const comunidades = new Map<
+      number,
+      string
+    >();
+
+    this.lecturas().forEach(
+      lectura => {
+
+        const comunidad =
+          lectura.sensor?.comunidad;
+
+        if (comunidad) {
+
+          comunidades.set(
+            comunidad.idComunidad,
+            comunidad.nombre
+          );
+        }
+
+      }
+    );
+
+    return Array.from(
+      comunidades.entries()
+    ).map(
+      ([idComunidad, nombre]) => ({
+        idComunidad,
+        nombre
+      })
+    );
+  });
+
   constructor(
     private lecturasService: LecturasService
   ) {}
@@ -212,7 +281,9 @@ export class Lecturas implements OnInit {
 
         next: lecturas => {
 
-          this.lecturas.set(lecturas);
+          this.lecturas.set(
+            lecturas
+          );
 
           this.paginaActual.set(1);
 
@@ -240,7 +311,21 @@ export class Lecturas implements OnInit {
     valor: string
   ): void {
 
-    this.filtroSensor.set(valor);
+    this.filtroSensor.set(
+      valor
+    );
+
+    this.paginaActual.set(1);
+  }
+
+  cambiarComunidad(
+    valor: string
+  ): void {
+
+    this.filtroComunidad.set(
+      valor
+    );
+
     this.paginaActual.set(1);
   }
 
@@ -248,7 +333,10 @@ export class Lecturas implements OnInit {
     valor: string
   ): void {
 
-    this.filtroFecha.set(valor);
+    this.filtroFecha.set(
+      valor
+    );
+
     this.paginaActual.set(1);
   }
 
@@ -256,7 +344,10 @@ export class Lecturas implements OnInit {
     valor: string
   ): void {
 
-    this.busqueda.set(valor);
+    this.busqueda.set(
+      valor
+    );
+
     this.paginaActual.set(1);
   }
 
@@ -274,6 +365,7 @@ export class Lecturas implements OnInit {
   limpiarFiltros(): void {
 
     this.filtroSensor.set('');
+    this.filtroComunidad.set('');
     this.filtroFecha.set('');
     this.busqueda.set('');
     this.paginaActual.set(1);
@@ -281,7 +373,9 @@ export class Lecturas implements OnInit {
 
   paginaAnterior(): void {
 
-    if (this.paginaActual() > 1) {
+    if (
+      this.paginaActual() > 1
+    ) {
 
       this.paginaActual.update(
         pagina => pagina - 1

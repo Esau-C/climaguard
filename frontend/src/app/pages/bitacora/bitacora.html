@@ -1,0 +1,138 @@
+
+<app-navbar></app-navbar>
+
+<main class="bitacora-contenedor">
+  <header class="bitacora-encabezado">
+    <div>
+      <h1>Bitácora de auditoría</h1>
+      <p>Consulta y seguimiento de las acciones realizadas en ClimaGuard.</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-actualizar"
+      (click)="cargarBitacoras()"
+      [disabled]="cargando()">
+      Actualizar registros
+    </button>
+  </header>
+
+  <section class="bitacora-resumen">
+    <div class="resumen-tarjeta">
+      <span>Total de registros</span>
+      <strong>{{ bitacoras().length }}</strong>
+    </div>
+
+    <div class="resumen-tarjeta">
+      <span>Acciones diferentes</span>
+      <strong>{{ acciones().length }}</strong>
+    </div>
+
+    <div class="resumen-tarjeta">
+      <span>Registros filtrados</span>
+      <strong>{{ bitacorasFiltradas().length }}</strong>
+    </div>
+  </section>
+
+  <section class="bitacora-panel">
+    <div class="panel-encabezado">
+      <h2>Historial de actividades</h2>
+      <p>Filtra los movimientos registrados en el sistema.</p>
+    </div>
+
+    <div class="bitacora-filtros">
+      <div class="campo-filtro">
+        <label for="buscarBitacora">Buscar</label>
+        <input
+          id="buscarBitacora"
+          type="text"
+          placeholder="Buscar usuario, descripción o identificador..."
+          [ngModel]="filtroTexto()"
+          (ngModelChange)="actualizarFiltroTexto($event)" />
+      </div>
+
+      <div class="campo-filtro">
+        <label for="accionBitacora">Acción</label>
+        <select
+          id="accionBitacora"
+          [ngModel]="filtroAccion()"
+          (ngModelChange)="actualizarFiltroAccion($event)">
+          <option value="TODAS">Todas las acciones</option>
+          <option *ngFor="let accion of acciones()" [value]="accion">
+            {{ accion }}
+          </option>
+        </select>
+      </div>
+
+      <div class="campo-filtro">
+        <label for="entidadBitacora">Entidad</label>
+        <select
+          id="entidadBitacora"
+          [ngModel]="filtroEntidad()"
+          (ngModelChange)="actualizarFiltroEntidad($event)">
+          <option value="TODAS">Todas las entidades</option>
+          <option *ngFor="let entidad of entidades()" [value]="entidad">
+            {{ entidad }}
+          </option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="btn-limpiar"
+        (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    </div>
+
+    <p *ngIf="error()" class="bitacora-error">
+      {{ error() }}
+    </p>
+
+    <p *ngIf="cargando()" class="bitacora-mensaje">
+      Cargando registros de auditoría...
+    </p>
+
+    <div *ngIf="!cargando()" class="tabla-contenedor">
+      <table class="bitacora-tabla">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Acción</th>
+            <th>Entidad</th>
+            <th>ID entidad</th>
+            <th>Descripción</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let registro of bitacorasFiltradas()">
+            <td>{{ registro.idBitacora }}</td>
+            <td>{{ registro.fecha | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+            <td>
+              {{ registro.usuario?.username || ('Usuario #' + registro.idUsuario) }}
+            </td>
+            <td>
+              <span class="accion-etiqueta">
+                {{ registro.accion }}
+              </span>
+            </td>
+            <td>{{ registro.entidad }}</td>
+            <td>{{ registro.idEntidad || '—' }}</td>
+            <td>{{ registro.descripcion }}</td>
+            <td>{{ registro.ip || '—' }}</td>
+          </tr>
+
+          <tr *ngIf="bitacorasFiltradas().length === 0">
+            <td colspan="8" class="sin-registros">
+              No se encontraron registros con los filtros seleccionados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>

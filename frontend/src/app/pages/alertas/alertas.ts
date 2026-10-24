@@ -1,26 +1,26 @@
+
 import {
   Component,
   OnInit,
+  OnDestroy,
   computed,
   signal
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 
-import {
-  FormsModule
-} from '@angular/forms';
-
-import {
-  Navbar
-} from '../../components/navbar/navbar';
+import { Navbar } from '../../components/navbar/navbar';
 
 import {
   Alerta,
   AlertasService
 } from '../../services/alertas.service';
+
+import {
+  SignalrService
+} from '../../services/signalr.service';
 
 @Component({
   selector: 'app-alertas',
@@ -33,7 +33,7 @@ import {
   templateUrl: './alertas.html',
   styleUrl: './alertas.css'
 })
-export class Alertas implements OnInit {
+export class Alertas implements OnInit, OnDestroy {
 
   alertas = signal<Alerta[]>([]);
   cargando = signal(true);
@@ -42,12 +42,19 @@ export class Alertas implements OnInit {
   filtroNivel = signal('');
   filtroEstado = signal('');
   filtroFenomeno = signal('');
+  filtroComunidad = signal('');
 
   alertaActualizando = signal<number | null>(null);
+
+  private suscripcionSignalR?: Subscription;
 
   alertasFiltradas = computed(() => {
 
     return this.alertas().filter(alerta => {
+
+      const idComunidad =
+        alerta.sensor?.comunidad
+          ?.idComunidad?.toString() || '';
 
       const cumpleNivel =
         !this.filtroNivel() ||
@@ -61,20 +68,73 @@ export class Alertas implements OnInit {
         !this.filtroFenomeno() ||
         alerta.tipoFenomeno === this.filtroFenomeno();
 
+      const cumpleComunidad =
+        !this.filtroComunidad() ||
+        idComunidad === this.filtroComunidad();
+
       return (
         cumpleNivel &&
         cumpleEstado &&
-        cumpleFenomeno
+        cumpleFenomeno &&
+        cumpleComunidad
       );
     });
   });
 
+  comunidadesDisponibles = computed(() => {
+
+    const comunidades = new Map<number, string>();
+
+    this.alertas().forEach(alerta => {
+
+      const comunidad = alerta.sensor?.comunidad;
+
+      if (comunidad) {
+        comunidades.set(
+          comunidad.idComunidad,
+          comunidad.nombre
+        );
+      }
+    });
+
+    return Array.from(comunidades.entries()).map(
+      ([idComunidad, nombre]) => ({
+        idComunidad,
+        nombre
+      })
+    );
+  });
+
   constructor(
-    private alertasService: AlertasService
+    private alertasService: AlertasService,
+    private signalrService: SignalrService
   ) {}
 
   ngOnInit(): void {
+
+    // escuchar nuevas alertas en tiempo real
+    this.suscripcionSignalR =
+      this.signalrService.nuevaAlerta$
+        .subscribe(alerta => {
+
+          console.log(
+            'Actualizando alertas en tiempo real:',
+            alerta
+          );
+
+          // recargar para obtener tambien los datos
+          // del sensor y la comunidad
+          this.cargarAlertas();
+        });
+
+    // cargar las alertas existentes
     this.cargarAlertas();
+  }
+
+  ngOnDestroy(): void {
+
+    // liberar la suscripcion del componente
+    this.suscripcionSignalR?.unsubscribe();
   }
 
   cargarAlertas(): void {
@@ -90,7 +150,6 @@ export class Alertas implements OnInit {
 
           this.alertas.set(alertas);
           this.cargando.set(false);
-
         },
 
         error: error => {
@@ -106,7 +165,6 @@ export class Alertas implements OnInit {
 
           this.cargando.set(false);
         }
-
       });
   }
 
@@ -122,11 +180,16 @@ export class Alertas implements OnInit {
     this.filtroFenomeno.set(valor);
   }
 
+  cambiarComunidad(valor: string): void {
+    this.filtroComunidad.set(valor);
+  }
+
   limpiarFiltros(): void {
 
     this.filtroNivel.set('');
     this.filtroEstado.set('');
     this.filtroFenomeno.set('');
+    this.filtroComunidad.set('');
   }
 
   marcarComoAtendida(alerta: Alerta): void {
@@ -135,9 +198,7 @@ export class Alertas implements OnInit {
       return;
     }
 
-    this.alertaActualizando.set(
-      alerta.idAlerta
-    );
+    this.alertaActualizando.set(alerta.idAlerta);
 
     this.alertasService
       .actualizarEstado(
@@ -152,9 +213,7 @@ export class Alertas implements OnInit {
 
             return actuales.map(item => {
 
-              if (
-                item.idAlerta === alerta.idAlerta
-              ) {
+              if (item.idAlerta === alerta.idAlerta) {
 
                 return {
                   ...item,
@@ -163,9 +222,7 @@ export class Alertas implements OnInit {
               }
 
               return item;
-
             });
-
           });
 
           this.alertaActualizando.set(null);
@@ -184,7 +241,6 @@ export class Alertas implements OnInit {
             'No fue posible actualizar la alerta.'
           );
         }
-
       });
   }
 }

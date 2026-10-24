@@ -166,3 +166,4 @@ C:\Users\esaug\OneDrive\Escritorio\climaguard\backend\ClimaGuard.API\bin\Debug\n
 C:\Users\esaug\OneDrive\Escritorio\climaguard\backend\ClimaGuard.API\bin\Debug\net10.0\BCrypt-Net-Next.dll
 C:\Users\esaug\OneDrive\Escritorio\climaguard\backend\ClimaGuard.API\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\esaug\OneDrive\Escritorio\climaguard\backend\ClimaGuard.API\bin\Debug\net10.0\Microsoft.Bcl.Cryptography.dll
+C:\Users\esaug\OneDrive\Escritorio\climaguard\backend\ClimaGuard.API\obj\Debug\net10.0\ClimaGuard.API.sourcelink.json

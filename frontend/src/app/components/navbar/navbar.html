@@ -1,3 +1,4 @@
+
 <nav class="navbar">
 
   <div class="marca">
@@ -35,11 +36,34 @@
     </a>
 
     <a
+      routerLink="/reglas-alerta"
+      routerLinkActive="activo"
+    >
+      Reglas de alerta
+    </a>
+
+    <a
+      *ngIf="esAdmin()"
+      routerLink="/comunidades"
+      routerLinkActive="activo"
+    >
+      Comunidades
+    </a>
+
+    <a
       *ngIf="esAdmin()"
       routerLink="/usuarios"
       routerLinkActive="activo"
     >
       Usuarios
+    </a>
+
+    <a
+      *ngIf="esAdmin()"
+      routerLink="/bitacora"
+      routerLinkActive="activo"
+    >
+      Bitácora
     </a>
 
   </div>

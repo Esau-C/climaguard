@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ClimaGuard.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d39990684f0da84612c34191a6bb1882f9f5b432")]
 [assembly: System.Reflection.AssemblyProductAttribute("ClimaGuard.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ClimaGuard.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

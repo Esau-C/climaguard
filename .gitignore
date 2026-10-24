@@ -1,0 +1,36 @@
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Angular / Node.js
+**/node_modules/
+**/dist/
+**/.angular/
+**/coverage/
+
+# Configuracion local y secretos
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/.env
+**/.env.*
+!**/.env.example
+**/secrets.json
+**/secrets/
+
+# Archivos de desarrollo
+.vs/
+.vscode/
+.idea/
+*.log
+*.tmp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Copias de seguridad
+*.bak
+*.backup

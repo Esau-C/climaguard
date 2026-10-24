@@ -1,0 +1,372 @@
+<app-navbar></app-navbar>
+
+<main class="contenedor-comunidades">
+
+  <section class="encabezado">
+    <div>
+      <span class="etiqueta">ADMINISTRACIÓN</span>
+      <h1>Comunidades</h1>
+      <p>
+        Administra las comunidades y zonas donde se encuentran
+        instalados los sensores de ClimaGuard.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-nueva"
+      (click)="abrirFormulario()"
+    >
+      + Nueva comunidad
+    </button>
+  </section>
+
+  @if (mensaje()) {
+    <div class="mensaje exito">
+      {{ mensaje() }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="mensaje error">
+      {{ error() }}
+    </div>
+  }
+
+  @if (mostrarFormulario()) {
+
+    <section class="panel-formulario">
+
+      <div class="titulo-formulario">
+        <div>
+          <h2>
+            {{ editando()
+              ? 'Editar comunidad'
+              : 'Nueva comunidad'
+            }}
+          </h2>
+
+          <p>
+            {{
+              editando()
+                ? 'Modifica la información de la comunidad seleccionada.'
+                : 'Registra una nueva comunidad para el monitoreo climático.'
+            }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="btn-cerrar"
+          (click)="cerrarFormulario()"
+        >
+          ×
+        </button>
+      </div>
+
+      <form
+        class="formulario"
+        (ngSubmit)="guardarComunidad()"
+      >
+
+        <div class="grupo">
+          <label for="nombre">
+            Nombre *
+          </label>
+
+          <input
+            id="nombre"
+            name="nombre"
+            type="text"
+            maxlength="150"
+            [(ngModel)]="formulario.nombre"
+            placeholder="Ej. Comunidad Lago Atitlán"
+            required
+          >
+        </div>
+
+        <div class="grupo">
+          <label for="municipio">
+            Municipio *
+          </label>
+
+          <input
+            id="municipio"
+            name="municipio"
+            type="text"
+            maxlength="150"
+            [(ngModel)]="formulario.municipio"
+            placeholder="Ej. Panajachel"
+            required
+          >
+        </div>
+
+        <div class="grupo">
+          <label for="departamento">
+            Departamento *
+          </label>
+
+          <input
+            id="departamento"
+            name="departamento"
+            type="text"
+            maxlength="150"
+            [(ngModel)]="formulario.departamento"
+            placeholder="Ej. Sololá"
+            required
+          >
+        </div>
+
+        <div class="grupo">
+          <label for="pais">
+            País *
+          </label>
+
+          <input
+            id="pais"
+            name="pais"
+            type="text"
+            maxlength="100"
+            [(ngModel)]="formulario.pais"
+            required
+          >
+        </div>
+
+        <div class="grupo">
+          <label for="latitud">
+            Latitud
+          </label>
+
+          <input
+            id="latitud"
+            name="latitud"
+            type="number"
+            step="0.0001"
+            [(ngModel)]="formulario.latitud"
+            placeholder="14.4774"
+          >
+        </div>
+
+        <div class="grupo">
+          <label for="longitud">
+            Longitud
+          </label>
+
+          <input
+            id="longitud"
+            name="longitud"
+            type="number"
+            step="0.0001"
+            [(ngModel)]="formulario.longitud"
+            placeholder="-90.6349"
+          >
+        </div>
+
+        <div class="grupo grupo-completo">
+          <label for="descripcion">
+            Descripción
+          </label>
+
+          <textarea
+            id="descripcion"
+            name="descripcion"
+            rows="4"
+            maxlength="500"
+            [(ngModel)]="formulario.descripcion"
+            placeholder="Descripción de la comunidad o zona de monitoreo..."
+          ></textarea>
+        </div>
+
+        <div class="acciones-formulario grupo-completo">
+
+          <button
+            type="button"
+            class="btn-cancelar"
+            (click)="cerrarFormulario()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="btn-guardar"
+          >
+            {{
+              editando()
+                ? 'Guardar cambios'
+                : 'Crear comunidad'
+            }}
+          </button>
+
+        </div>
+
+      </form>
+
+    </section>
+  }
+
+  <section class="panel-listado">
+
+    <div class="cabecera-listado">
+      <div>
+        <h2>Comunidades registradas</h2>
+
+        <p>
+          {{ comunidades().length }}
+          comunidad(es) registrada(s)
+        </p>
+      </div>
+    </div>
+
+    @if (cargando()) {
+
+      <div class="estado-vacio">
+        <div class="icono-estado">⌛</div>
+        <h3>Cargando comunidades...</h3>
+        <p>Obteniendo información del servidor.</p>
+      </div>
+
+    } @else if (comunidades().length === 0) {
+
+      <div class="estado-vacio">
+        <div class="icono-estado">⌖</div>
+        <h3>No hay comunidades registradas</h3>
+        <p>
+          Crea una comunidad para comenzar a organizar
+          los sensores por ubicación.
+        </p>
+      </div>
+
+    } @else {
+
+      <div class="tabla-contenedor">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Comunidad</th>
+              <th>Ubicación</th>
+              <th>Coordenadas</th>
+              <th>Estado</th>
+              <th>Registro</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for (
+              comunidad of comunidades();
+              track comunidad.idComunidad
+            ) {
+
+              <tr>
+
+                <td>
+                  <div class="comunidad-principal">
+                    <div class="icono-comunidad">
+                      C
+                    </div>
+
+                    <div>
+                      <strong>
+                        {{ comunidad.nombre }}
+                      </strong>
+
+                      <span>
+                        ID #{{ comunidad.idComunidad }}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <strong>
+                    {{ comunidad.municipio }}
+                  </strong>
+
+                  <span class="dato-secundario">
+                    {{ comunidad.departamento }},
+                    {{ comunidad.pais }}
+                  </span>
+                </td>
+
+                <td>
+                  @if (
+                    comunidad.latitud !== null &&
+                    comunidad.longitud !== null
+                  ) {
+                    <span class="coordenadas">
+                      {{ comunidad.latitud }},
+                      {{ comunidad.longitud }}
+                    </span>
+                  } @else {
+                    <span class="sin-dato">
+                      Sin coordenadas
+                    </span>
+                  }
+                </td>
+
+                <td>
+                  <span
+                    class="estado"
+                    [class.activa]="comunidad.activa"
+                    [class.inactiva]="!comunidad.activa"
+                  >
+                    {{
+                      comunidad.activa
+                        ? 'Activa'
+                        : 'Inactiva'
+                    }}
+                  </span>
+                </td>
+
+                <td>
+                  {{
+                    comunidad.fechaRegistro
+                      | date:'dd/MM/yyyy'
+                  }}
+                </td>
+
+                <td>
+                  <div class="acciones">
+
+                    <button
+                      type="button"
+                      class="btn-editar"
+                      (click)="editarComunidad(comunidad)"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-estado"
+                      [class.activar]="!comunidad.activa"
+                      [class.desactivar]="comunidad.activa"
+                      (click)="cambiarEstado(comunidad)"
+                    >
+                      {{
+                        comunidad.activa
+                          ? 'Desactivar'
+                          : 'Activar'
+                      }}
+                    </button>
+
+                  </div>
+                </td>
+
+              </tr>
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+    }
+
+  </section>
+
+</main>

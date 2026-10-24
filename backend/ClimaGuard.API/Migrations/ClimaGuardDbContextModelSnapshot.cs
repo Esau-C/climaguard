@@ -107,6 +107,55 @@ namespace ClimaGuard.API.Migrations
                     b.ToTable("Bitacoras");
                 });
 
+            modelBuilder.Entity("ClimaGuard.API.Models.Comunidad", b =>
+                {
+                    b.Property<int>("IdComunidad")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdComunidad"));
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Departamento")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("Latitud")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Longitud")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Municipio")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Pais")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("IdComunidad");
+
+                    b.ToTable("Comunidades");
+                });
+
             modelBuilder.Entity("ClimaGuard.API.Models.Evento", b =>
                 {
                     b.Property<int>("IdEvento")
@@ -184,6 +233,79 @@ namespace ClimaGuard.API.Migrations
                     b.ToTable("Lecturas");
                 });
 
+            modelBuilder.Entity("ClimaGuard.API.Models.ReglaAlerta", b =>
+                {
+                    b.Property<int>("IdReglaAlerta")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdReglaAlerta"));
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Nivel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Operador")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("OperadorSecundario")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("TipoFenomeno")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Umbral")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("UmbralSecundario")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Variable")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("VariableSecundaria")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("IdReglaAlerta");
+
+                    b.HasIndex("TipoFenomeno", "Nivel", "Activa");
+
+                    b.ToTable("ReglasAlerta");
+                });
+
             modelBuilder.Entity("ClimaGuard.API.Models.Sensor", b =>
                 {
                     b.Property<int>("IdSensor")
@@ -195,8 +317,22 @@ namespace ClimaGuard.API.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Codigo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FechaInstalacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("IdComunidad")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("Latitud")
                         .HasColumnType("decimal(18,2)");
@@ -206,17 +342,31 @@ namespace ClimaGuard.API.Migrations
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Ubicacion")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UnidadMedida")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("IdSensor");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasFilter("[Codigo] IS NOT NULL");
+
+                    b.HasIndex("IdComunidad");
 
                     b.ToTable("Sensores");
                 });
@@ -321,6 +471,21 @@ namespace ClimaGuard.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Sensor");
+                });
+
+            modelBuilder.Entity("ClimaGuard.API.Models.Sensor", b =>
+                {
+                    b.HasOne("ClimaGuard.API.Models.Comunidad", "Comunidad")
+                        .WithMany("Sensores")
+                        .HasForeignKey("IdComunidad")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Comunidad");
+                });
+
+            modelBuilder.Entity("ClimaGuard.API.Models.Comunidad", b =>
+                {
+                    b.Navigation("Sensores");
                 });
 
             modelBuilder.Entity("ClimaGuard.API.Models.Sensor", b =>

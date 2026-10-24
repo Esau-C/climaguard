@@ -19,9 +19,12 @@
 
   </div>
 
+
   <!-- filtros -->
 
   <section class="filtros">
+
+    <!-- nivel -->
 
     <div class="campo-filtro">
 
@@ -54,6 +57,9 @@
 
     </div>
 
+
+    <!-- estado -->
+
     <div class="campo-filtro">
 
       <label>
@@ -80,6 +86,9 @@
       </select>
 
     </div>
+
+
+    <!-- fenomeno -->
 
     <div class="campo-filtro">
 
@@ -112,6 +121,36 @@
 
     </div>
 
+
+    <!-- comunidad -->
+
+    <div class="campo-filtro">
+
+      <label>
+        Comunidad
+      </label>
+
+      <select
+        [ngModel]="filtroComunidad()"
+        (ngModelChange)="cambiarComunidad($event)"
+      >
+
+        <option value="">
+          Todas
+        </option>
+
+        <option
+          *ngFor="let comunidad of comunidadesDisponibles()"
+          [value]="comunidad.idComunidad"
+        >
+          {{ comunidad.nombre }}
+        </option>
+
+      </select>
+
+    </div>
+
+
     <button
       type="button"
       class="btn-limpiar"
@@ -122,6 +161,7 @@
 
   </section>
 
+
   <!-- cargando -->
 
   <div
@@ -130,6 +170,7 @@
   >
     Cargando alertas...
   </div>
+
 
   <!-- error -->
 
@@ -151,6 +192,7 @@
 
   </div>
 
+
   <!-- sin resultados -->
 
   <div
@@ -163,6 +205,7 @@
   >
     No se encontraron alertas con los filtros seleccionados.
   </div>
+
 
   <!-- alertas -->
 
@@ -202,10 +245,14 @@
         </div>
 
         <span class="fecha">
-          {{ alerta.fechaGeneracion | date:'dd/MM/yyyy HH:mm:ss' }}
+          {{
+            alerta.fechaGeneracion
+              | date:'dd/MM/yyyy HH:mm:ss'
+          }}
         </span>
 
       </div>
+
 
       <h2>
         {{ alerta.titulo }}
@@ -219,41 +266,112 @@
         {{ alerta.mensaje }}
       </p>
 
+
       <div class="datos">
 
+        <!-- sensor -->
+
         <div>
-          <span>Sensor</span>
+
+          <span>
+            Sensor
+          </span>
 
           <strong>
-            {{ alerta.sensor?.nombre || 'Sensor #' + alerta.idSensor }}
+            {{
+              alerta.sensor?.nombre ||
+              'Sensor #' + alerta.idSensor
+            }}
           </strong>
+
         </div>
 
+
+        <!-- comunidad -->
+
         <div>
-          <span>Ubicación</span>
+
+          <span>
+            Comunidad
+          </span>
 
           <strong>
-            {{ alerta.sensor?.ubicacion || 'Sin ubicación' }}
+            {{
+              alerta.sensor?.comunidad?.nombre ||
+              'Sin comunidad'
+            }}
           </strong>
+
         </div>
 
+
+        <!-- ubicacion -->
+
         <div>
-          <span>Lectura</span>
+
+          <span>
+            Ubicación
+          </span>
+
+          <strong>
+            {{
+              alerta.sensor?.ubicacion ||
+              'Sin ubicación'
+            }}
+          </strong>
+
+        </div>
+
+
+        <!-- municipio -->
+
+        <div>
+
+          <span>
+            Municipio
+          </span>
+
+          <strong>
+            {{
+              alerta.sensor?.comunidad?.municipio ||
+              'Sin municipio'
+            }}
+          </strong>
+
+        </div>
+
+
+        <!-- lectura -->
+
+        <div>
+
+          <span>
+            Lectura
+          </span>
 
           <strong>
             #{{ alerta.idLectura }}
           </strong>
+
         </div>
 
+
+        <!-- id alerta -->
+
         <div>
-          <span>ID alerta</span>
+
+          <span>
+            ID alerta
+          </span>
 
           <strong>
             #{{ alerta.idAlerta }}
           </strong>
+
         </div>
 
       </div>
+
 
       <!-- acciones -->
 
@@ -263,7 +381,9 @@
           *ngIf="alerta.estado === 'ACTIVA'"
           type="button"
           class="btn-atender"
-          [disabled]="alertaActualizando() === alerta.idAlerta"
+          [disabled]="
+            alertaActualizando() === alerta.idAlerta
+          "
           (click)="marcarComoAtendida(alerta)"
         >
 
@@ -274,6 +394,7 @@
           }}
 
         </button>
+
 
         <span
           *ngIf="alerta.estado === 'ATENDIDA'"
